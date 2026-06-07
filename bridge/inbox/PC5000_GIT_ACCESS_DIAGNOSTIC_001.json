@@ -1,0 +1,24 @@
+{
+  "schema": "evos.pc5000.git_access_diagnostic.v1",
+  "command_id": "PC5000_GIT_ACCESS_DIAGNOSTIC_001",
+  "created_utc": "2026-06-07T09:38:58Z",
+  "target": {
+    "machine": "PC5000",
+    "hostname_expected": "BLAIRSPC",
+    "local_user": "Blair",
+    "rid_sid_tail": "1001",
+    "operator": "Administrator"
+  },
+  "mode": "read_only",
+  "purpose": "Ask PC5000 what Git access exists locally and return safe output.",
+  "do_not": [
+    "do not expose tokens",
+    "do not print passwords",
+    "do not run git push",
+    "do not run git pull",
+    "do not modify repo state",
+    "do not delete lock files",
+    "do not reset Windows",
+    "do not change ACLs"
+  ]
+}
