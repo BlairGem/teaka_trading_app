@@ -1,0 +1,27 @@
+name: Paper Trading Safety Tests
+
+on:
+  push:
+    paths:
+      - "paper_trading/**"
+      - ".github/workflows/paper-trading-tests.yml"
+  pull_request:
+    paths:
+      - "paper_trading/**"
+      - ".github/workflows/paper-trading-tests.yml"
+
+jobs:
+  paper-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run unit tests
+        run: python -m unittest discover -s paper_trading -v
+      - name: Run deterministic paper session
+        run: >-
+          python paper_trading/run_paper.py
+          --ticks paper_trading/sample_ticks.csv
+          --log /tmp/teaka-paper-fills.jsonl
