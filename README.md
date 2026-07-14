@@ -1,62 +1,114 @@
 # TeAka Trading System
 
-## Status
+## Current status
 
-TeAka is currently being prepared for controlled paper trading validation.
+**Ready for controlled paper trading with supplied price ticks.**
 
-Live trading is not enabled by this documentation.
+The verified paper path is isolated from exchange order APIs. It creates virtual fills, virtual positions, P/L, fees, slippage, drawdown and JSONL audit logs. Live order submission remains disabled.
 
-## Architecture
+## Verified paper path
 
+```text
+CSV/public price ticks
+        |
+        v
+Momentum demo strategy
+        |
+        v
+PaperBroker risk checks
+        |
+        v
+Virtual fills and positions
+        |
+        v
+JSONL audit log + account snapshot
 ```
-Market Data
-    |
-    v
-Strategy Engine
-    |
-    v
-Risk Layer
-    |
-    v
-Paper Order Simulator
-    |
-    v
-Performance Tracking
+
+## Safety guarantees
+
+The `paper_trading` package:
+
+- imports no exchange SDK
+- contains no private exchange API route
+- reports `live_order_routes: false`
+- rejects symbols outside the allowlist
+- limits order notional
+- limits position concentration
+- blocks shorting by default
+- applies configurable fees and slippage
+- activates a kill switch at the configured drawdown
+- writes every fill or rejection to an auditable JSONL log
+
+## Run the verified sample
+
+From the repository root:
+
+```powershell
+python -m unittest discover -s paper_trading -v
+python paper_trading/run_paper.py --ticks paper_trading/sample_ticks.csv
 ```
 
-## Current Components
+The default fill log is written to:
 
-- React dashboard frontend
-- TypeScript build workflow
-- EV integration references
-- Database and runtime components under verification
+```text
+paper_trading/state/paper_fills.jsonl
+```
 
-## Paper Trading Requirements
+## Configuration
 
-Before enabling any automated strategy:
+Copy and edit:
 
-- Confirm paper/simulation mode
-- Confirm market data feed
-- Confirm virtual balance tracking
-- Confirm simulated orders only
-- Confirm logs and performance records
-- Confirm live exchange orders remain disabled
+```text
+paper_trading/config.example.json
+```
 
-## Safety Rules
+Default controls:
 
-- Never commit API keys or private credentials
-- Do not enable live trading during testing
-- Verify exchange permissions before any future production use
-- Keep runtime state and logs auditable
+- virtual cash: 10,000
+- maximum order notional: 1,000
+- maximum position: 20% of equity
+- maximum drawdown: 15%
+- shorting: disabled
+- allowed symbols: BTC-USDT, ETH-USDT, SOL-USDT
 
-## EV Integration
+## Feed format
 
-The EV runtime repository maintains system maps, manifests, launchers and TeAka references. TeAka integration should follow verified runtime documentation before activation.
+The runner accepts CSV data with these columns:
 
-## Next Validation Steps
+```csv
+timestamp,symbol,price
+2026-07-14T00:00:00Z,BTC-USDT,60000
+```
 
-1. Locate backend services
-2. Locate trading strategy modules
-3. Validate paper execution path
-4. Run controlled simulation
-5. Review performance before any live deployment
+This allows historical data, recorded public market data, or a separate public-feed collector to drive the paper broker without exposing private trading credentials.
+
+## Existing project components located
+
+- React/TypeScript dashboard
+- historical TypeScript backtest engine
+- FastAPI market/prediction prototype
+- KuCoin public-feed prototypes
+- EV runtime and GEMBot integration references
+- PostgreSQL/authentication prototypes
+
+Some legacy files are prototypes and are not part of the verified paper execution path.
+
+## Credential security
+
+Tracked exchange credentials were removed from the current branch. Any credential that previously appeared in Git history must be revoked or rotated before private API access is considered. See `SECURITY.md`.
+
+Use `.env.example` only as a template. Never commit real values.
+
+## CI gate
+
+GitHub Actions runs:
+
+```text
+.github/workflows/paper-trading-tests.yml
+```
+
+The workflow executes the unit tests and a deterministic paper session on paper-trading changes.
+
+## Live trading status
+
+Live trading is **not enabled**. Before live deployment, complete a separate review of exchange permissions, credential storage, order-routing code, reconciliation, monitoring and emergency shutdown behavior.
