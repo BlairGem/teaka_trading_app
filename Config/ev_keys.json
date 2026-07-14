@@ -1,7 +1,12 @@
 {
-  "kucoin": {
-    "api_key": "683b30f36025980001ef4bde",
-    "secret_key": "bde878ab-03b8-4ea2-923f-1c0d98880009",
-    "passphrase": "evbot-80"
-  }
+  "mode": "paper",
+  "live_trading_enabled": false,
+  "private_exchange_api_enabled": false,
+  "credentials_source": "environment_only",
+  "required_environment_variables_for_future_live_mode": [
+    "KUCOIN_API_KEY",
+    "KUCOIN_API_SECRET",
+    "KUCOIN_API_PASSPHRASE"
+  ],
+  "security_note": "Never store credentials in Git. Rotate any credentials that were previously committed."
 }
