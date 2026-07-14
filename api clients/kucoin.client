@@ -1,9 +1,9 @@
 {
-  "kucoin": {
-    "api_key": "683b30f36025980001ef4bde",
-    "secret_key": "bde878ab-03b8-4ea2-923f-1c0d98880009",
-    "passphrase": "evbot-80"
-  }
+  "provider": "kucoin",
+  "mode": "paper",
+  "public_market_data_only": true,
+  "private_api_enabled": false,
+  "live_order_submission_enabled": false,
+  "credentials_source": "environment_only",
+  "security_note": "Do not place API keys, secrets, or passphrases in this repository."
 }
-
-pip install python-kucoin
