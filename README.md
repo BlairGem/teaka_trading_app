@@ -1,231 +1,169 @@
 # TeAka Trading System
 
-## Current status
+EV recovery fork of [`TeAkaTrader/teaka_trading_app`](https://github.com/TeAkaTrader/teaka_trading_app).  
+Homepage target: [teaka.trading](https://teaka.trading)
 
-**Production-ready for controlled paper trading with supplied price ticks.**
+## What this repository is
 
-The verified paper path is isolated from exchange order APIs. It creates virtual fills, virtual positions, P/L, fees, slippage, drawdown and JSONL audit logs. Live order submission remains disabled.
+This tree is the **TeAka app / recovery surface**:
 
-## Verified paper path
+- verified **paper trading** path (safe to run here)
+- dashboard, risk, ML/backtest, SQL, EV bridge **fragments**
+- pointers to the **full live trading engine** and local EV/GEMBot/Swarm layout
+
+It is **not** a complete copy of every local Windows / Starforge / GEMBotSys artifact. Those stay on the local machine (`E:\EV_Files`, `D:\Starforge`, user `GEMBotSys`) and in sibling / private repos.
+
+Live exchange order submission in this fork remains **disabled**.
+
+---
+
+## Ready to run now (verified)
+
+### Paper trading
 
 ```text
-CSV/public price ticks
-        |
-        v
-Momentum demo strategy
-        |
-        v
-PaperBroker risk checks
-        |
-        v
-Virtual fills and positions
-        |
-        v
+CSV / public price ticks
+        →
+momentum demo strategy  (paper_trading/run_paper.py)
+        →
+PaperBroker risk checks  (paper_trading/paper_broker.py)
+        →
+virtual fills / positions / fees / slippage / drawdown kill switch
+        →
 JSONL audit log + account snapshot
 ```
 
-## Safety guarantees
-
-The `paper_trading` package:
-
-- imports no exchange SDK
-- contains no private exchange API route
-- reports `live_order_routes: false`
-- rejects symbols outside the allowlist
-- limits order notional
-- limits position concentration
-- blocks shorting by default
-- applies configurable fees and slippage
-- activates a kill switch at the configured drawdown
-- writes every fill or rejection to an auditable JSONL log
-
-## Run the verified sample
-
-From the repository root:
-
-```powershell
-python -m unittest discover -s paper_trading -v
-python paper_trading/run_paper.py --ticks paper_trading/sample_ticks.csv
+```bash
+python3 -m unittest discover -s paper_trading -v
+python3 paper_trading/run_paper.py --ticks paper_trading/sample_ticks.csv
 ```
 
-The default fill log is written to:
+Defaults (see `paper_trading/config.example.json`):
+
+| Control | Default |
+|---------|---------|
+| Virtual cash | 10,000 |
+| Max order notional | 1,000 |
+| Max position | 20% of equity |
+| Max drawdown | 15% |
+| Shorting | off |
+| Symbols | BTC-USDT, ETH-USDT, SOL-USDT |
+
+Tick CSV columns: `timestamp,symbol,price`
+
+CI: `.github/workflows/paper-trading-tests.yml`
+
+Safety: `paper_trading/` imports **no** exchange SDK and has **no** private order routes (`live_order_routes: false`).
+
+---
+
+## Full trading engine (sibling repo)
+
+The complete strategy → signal → risk → broker engine lives in:
+
+**[`TeAkaTrader/BoltBuddy`](https://github.com/TeAkaTrader/BoltBuddy)**  
+(Replit: `replit.com/@gee8/BoltBuddy`)
+
+| Module | Role |
+|--------|------|
+| `trading_engine.py` | Main loop: active strategies → signals → risk → optional auto-execute |
+| `unified_trading.py` | Unified manager across crypto / forex / stocks |
+| `signal_generator.py` | Technical + ML signal generation |
+| `broker_apis.py` | KuCoin / OANDA / Interactive Brokers order APIs |
+| `ccxt_integration.py` | CCXT exchanges (KuCoin, Binance, Coinbase, …) |
+| `fxcm_integration.py` / `alpaca_integration.py` | Forex / stocks |
+| `futures_trading.py` | KuCoin + IB futures |
+| `risk_management.py` | Position size, exposure, portfolio risk |
+| `ml_models.py` / `backtesting.py` | ML models and backtests |
+| `messaging.py` | Telegram + Discord + email alert bots |
+| `models.py` | Users, strategies, signals, executions, ML models |
+| `api/routes.py` | Flask `/api/*` for prices, charts, strategies, trades |
+| `templates/strategy_editor.html` | Strategy “bot” editor UI |
+| `main.py` / `app.py` | Flask app on port 5000 |
+
+Engine flow:
 
 ```text
-paper_trading/state/paper_fills.jsonl
+TradingStrategy (active)
+  → generate_signals_for_strategy()
+  → check_risk_limits() + calculate_position_size()
+  → notify (Telegram / Discord / email)
+  → execute_trade_from_signal() if automated trading enabled
+  → broker_apis / unified_trading / futures
 ```
 
-## Configuration
+Do **not** enable live keys in this recovery fork until credentials are rotated and a separate live-trading review is done. See `SECURITY.md`.
 
-Copy and edit:
+---
+
+## Bots, Swarm, GEMBot (where they actually are)
+
+| Name | Reality |
+|------|---------|
+| **Strategy bots** | BoltBuddy `TradingStrategy` + strategy editor + auto-trading flag |
+| **Alert bots** | BoltBuddy `messaging.py`; this repo has Telegram alert stubs (`public/ev_alert_api.py`, `alert_routes.py.py`, `@teaka_trader_bot` notes) |
+| **TeAka Swarm** | Branding / daily summary path in this repo (`email_report.py`, `schedule_teaka_summary.ps1`, sign-off “Teaka Swarm Core”). Not a multi-agent source tree in Git. |
+| **GEMBot / EVBot** | Local EV control layer. Referenced here via `status_report.yaml`, `ev_ollama_*.py`, `ev_remote_server.py`, `Config/# Define the EV Shell Runtime Envir.txt`. Windows provenance: user `GEMBotSys`, vault `D:\Starforge\Vault`, bridge `E:\EV_Files\Bridge` / `D:\EV_Files\Bridge`. Private EV control repo is expected outside this fork (e.g. `BlairGem/Ev` when available). |
+| **QTrader / RL bots** | Sketches in `model_output/` + planned tree in `integration_pipeline/QTrader.txt` — not wired to BoltBuddy or paper broker |
+| **Dashboard bot panel** | `templates/dashboard.html` still has a bot placeholder block |
+
+Local CS layout (from tracked paths / config — on your machine):
 
 ```text
-paper_trading/config.example.json
+E:\EV_Files\teaka_trading_app\     ← this app tree / reports / models
+E:\EV_Files\Bridge\                ← EV inbox / bridge drops
+E:\EV_Files\ev_virtual_brain.json  ← EV brain state
+D:\Starforge\Vault\                ← GEM Bot vault + spells
+D:\EV_Files\Tools\                 ← EV runtime environment JSON writers
+C:\Users\GEMBotSys\...             ← GEMBotSys Python / venv provenance
 ```
 
-Default controls:
+---
 
-- virtual cash: 10,000
-- maximum order notional: 1,000
-- maximum position: 20% of equity
-- maximum drawdown: 15%
-- shorting: disabled
-- allowed symbols: BTC-USDT, ETH-USDT, SOL-USDT
+## This fork — major areas
 
-## Feed format
+| Area | Location |
+|------|----------|
+| Verified paper broker | `paper_trading/` |
+| React / Firemind dashboard stubs | `src/`, `dashboard/`, `package.json` |
+| Risk UI / services | `RiskManagementPanel.tsx`, `riskManagementService.ts`, `riskAdjuster.ts` |
+| API / KuCoin / Telegram notes | `api clients/` |
+| Backtest TS + sklearn / RL sketches | `ml models/`, `model_output/`, `integration_pipeline/` |
+| SQL dashboard schemas | `sql_teaka_dashboard/`, root `create_*.sql` |
+| EV bridge / Ollama / brain | `ev_*.py`, `ev_virtual_brain.json`, `bridge/` |
+| UI hooks / public dashboards | `ui hooks/`, `public/`, `templates/` |
+| Full file cut | `teaka_file_index.txt` (exact inventory of this repo) |
 
-The runner accepts CSV data with these columns:
+---
 
-```csv
-timestamp,symbol,price
-2026-07-14T00:00:00Z,BTC-USDT,60000
-```
+## Environment
 
-This allows historical data, recorded public market data, or a separate public-feed collector to drive the paper broker without exposing private trading credentials.
-
-## Existing project components located
-
-High-level areas:
-
-- React/TypeScript dashboard
-- historical TypeScript backtest engine
-- FastAPI market/prediction prototype
-- KuCoin public-feed prototypes
-- EV runtime and GEMBot integration references
-- PostgreSQL/authentication prototypes
-- verified `paper_trading` broker and CI gate
-
-### TeAka full file list
-
-Complete cut verified against the repository tree. Canonical inventory: `teaka_file_index.txt` (107 project files; excludes local venv binaries only).
+Copy `.env.example` → `.env` (never commit real values):
 
 ```text
-.env.example
-.github/workflows/paper-trading-tests.yml
-.github/workflows/webpack.yml
-.gitignore
-Config/# Define the EV Shell Runtime Envir.txt
-Config/Repeatable Launch Commands (PowerShell).txt
-Config/backtest_config.json
-Config/ev_keys.json
-README.md
-RiskManagementPanel.tsx
-SECURITY.md
-alert_routes.py.py
-api clients/auth.py
-api clients/ev_keys.json
-api clients/fastapi.server.py
-api clients/kucoin.asyncio
-api clients/kucoin.client
-api clients/telegram_api.txt
-app.py
-app.py.py
-bridge/inbox/PC5000_GIT_ACCESS_DIAGNOSTIC_001.json
-create_dashboard_metrics.sql
-create_settings.sql
-create_trades.sql
-create_users.sql
-dashboad.zip
-dashboard/package.json
-dashboard/src/App.tsx
-directory.txt
-email_report.py
-ev.remote.server.py.py
-ev_node.py
-ev_ollama_auto_bind.py
-ev_ollama_bridge.py
-ev_remote_server.py
-ev_virtual_brain.json
-flask_api_routes.py
-flask_dashboard_stub.py
-generate_summary.py
-import_sql.ps1
-init_db.py
-initcluster.ps1
-integration_pipeline/QTrader.txt
-integration_pipeline/model_config.json
-integration_pipeline/sample_training_data.json
-integration_pipeline/tensorflow.py
-integration_pipeline/train_model.js
-launcher_shortcut.ps1
-market_prices.csv
-market_screener_table.html
-ml models/BacktestFunction.ts
-ml models/BacktestHistorical.ts
-ml models/BacktestInterval.ts
-ml models/BacktestSummary.ts
-ml models/Backtester.ts
-ml models/BacktesterTest.spec.ts
-ml models/backtestEngine.ts
-ml models/backtestEngine_1.ts
-ml models/gym.env
-ml models/sklearn model/.py
-ml models/sklearn model/evaluate.py
-ml models/sklearn model/sklearn.model.py
-ml models/sklearn model/train.model.py
-model_output/Algoithms/classifier.py
-model_output/Algoithms/dqn_agent.py
-model_output/Algoithms/train.rl.py
-model_output/BacktestDate.ts
-model_output/q_learning_trader.py
-package.json
-paper_trading/config.example.json
-paper_trading/paper_broker.py
-paper_trading/run_paper.py
-paper_trading/sample_ticks.csv
-paper_trading/test_paper_broker.py
-public/dashboard.html
-public/dashboard_backup_20250603_101019.html
-public/ev_alert_api.py
-public/ev_alert_api.py.json
-public/index.ts
-riskAdjuster.ts
-riskManagementService.ts
-schedule_teaka_summary.ps1
-sql_scripts.py
-sql_teaka_dashboard/create_dashboard_metrics.sql
-sql_teaka_dashboard/create_settings.sql
-sql_teaka_dashboard/create_trades.sql
-sql_teaka_dashboard/create_users.sql
-sql_teaka_dashboard/import_sql.ps1
-sql_teaka_dashboard/import_teaka_sql.ps1
-sql_teaka_dashboard/market_prices.csv
-sql_teaka_dashboard/package.json
-sql_teaka_dashboard/scan_postgresql_paths.ps1
-src/.ps1
-src/App.tsx
-status_report.yaml
-teaka_file_index.txt
-teaka_trading_app_validate_brain.py
-templates/dashboard.html
-templates/ws_feed.py
-train_model.py
-ui hooks/main.js
-ui hooks/ssl/cloudfare-origin-key.pem
-ui hooks/ssl/cloudfare.origin.pem
-ui hooks/ssl/index.html
-ui hooks/tradingview-widget-ui.txt
-ui hooks/web ui_index.html
-websocket.send_sql
+TEAKA_MODE=paper
+LIVE_TRADING_ENABLED=false
+PRIVATE_EXCHANGE_API_ENABLED=false
 ```
 
-The verified paper execution path is `paper_trading/` only. Other components are part of the broader TeAka product surface and integrations.
+---
 
-## Credential security
+## Security
 
-Tracked exchange credentials were removed from the current branch. Any credential that previously appeared in Git history must be revoked or rotated before private API access is considered. See `SECURITY.md`.
+- Rotate any exchange / Telegram / mail credentials that ever appeared in Git history.
+- Paper mode by default; live orders stay off in this fork.
+- Details: `SECURITY.md`.
 
-Use `.env.example` only as a template. Never commit real values.
+---
 
-## CI gate
-
-GitHub Actions runs:
+## Related systems
 
 ```text
-.github/workflows/paper-trading-tests.yml
+TeAkaTrader/teaka_trading_app   ← upstream of this recovery fork
+TeAkaTrader/BoltBuddy           ← full trading engine + strategy bots
+BlairGem/teaka_trading_app      ← this repo (audit / cleanup / paper rebuild)
+Local EV / GEMBot / Starforge   ← private control + swarm ops on PC5000 / GEMBotSys
+evstack/ev-node (external)      ← EV Stack / node framework (not vendored here)
 ```
 
-The workflow executes the unit tests and a deterministic paper session on paper-trading changes.
-
-## Live trading status
-
-Live trading is **not enabled**. Before live deployment, complete a separate review of exchange permissions, credential storage, order-routing code, reconciliation, monitoring and emergency shutdown behavior.
+Federation note (other branch docs): TeAka owns trading; EV GeoBlockchain / EV Stack stay in separate repos and integrate only through adapters.

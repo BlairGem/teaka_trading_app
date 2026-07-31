@@ -1,18 +1,7 @@
 # TeAka full file index — complete cut of tracked project files
-# Excludes local venv binaries (*.exe, python/pip, activate scripts, pyvenv.cfg)
+# Excludes local venv binaries (*.exe, python/pip, activate scripts, pyvenv.cfg) and __pycache__
 # Verified against repository tree
 
-.env.example
-.github/workflows/paper-trading-tests.yml
-.github/workflows/webpack.yml
-.gitignore
-Config/# Define the EV Shell Runtime Envir.txt
-Config/Repeatable Launch Commands (PowerShell).txt
-Config/backtest_config.json
-Config/ev_keys.json
-README.md
-RiskManagementPanel.tsx
-SECURITY.md
 alert_routes.py.py
 api clients/auth.py
 api clients/ev_keys.json
@@ -23,6 +12,10 @@ api clients/telegram_api.txt
 app.py
 app.py.py
 bridge/inbox/PC5000_GIT_ACCESS_DIAGNOSTIC_001.json
+Config/backtest_config.json
+Config/# Define the EV Shell Runtime Envir.txt
+Config/ev_keys.json
+Config/Repeatable Launch Commands (PowerShell).txt
 create_dashboard_metrics.sql
 create_settings.sql
 create_trades.sql
@@ -32,37 +25,41 @@ dashboard/package.json
 dashboard/src/App.tsx
 directory.txt
 email_report.py
-ev.remote.server.py.py
+.env.example
 ev_node.py
 ev_ollama_auto_bind.py
 ev_ollama_bridge.py
 ev_remote_server.py
+ev.remote.server.py.py
 ev_virtual_brain.json
 flask_api_routes.py
 flask_dashboard_stub.py
 generate_summary.py
+.github/workflows/paper-trading-tests.yml
+.github/workflows/webpack.yml
+.gitignore
 import_sql.ps1
-init_db.py
 initcluster.ps1
-integration_pipeline/QTrader.txt
+init_db.py
 integration_pipeline/model_config.json
+integration_pipeline/QTrader.txt
 integration_pipeline/sample_training_data.json
 integration_pipeline/tensorflow.py
 integration_pipeline/train_model.js
 launcher_shortcut.ps1
 market_prices.csv
 market_screener_table.html
+ml models/backtestEngine_1.ts
+ml models/backtestEngine.ts
+ml models/BacktesterTest.spec.ts
+ml models/Backtester.ts
 ml models/BacktestFunction.ts
 ml models/BacktestHistorical.ts
 ml models/BacktestInterval.ts
 ml models/BacktestSummary.ts
-ml models/Backtester.ts
-ml models/BacktesterTest.spec.ts
-ml models/backtestEngine.ts
-ml models/backtestEngine_1.ts
 ml models/gym.env
-ml models/sklearn model/.py
 ml models/sklearn model/evaluate.py
+ml models/sklearn model/.py
 ml models/sklearn model/sklearn.model.py
 ml models/sklearn model/train.model.py
 model_output/Algoithms/classifier.py
@@ -72,18 +69,22 @@ model_output/BacktestDate.ts
 model_output/q_learning_trader.py
 package.json
 paper_trading/config.example.json
+paper_trading/__init__.py
 paper_trading/paper_broker.py
 paper_trading/run_paper.py
 paper_trading/sample_ticks.csv
 paper_trading/test_paper_broker.py
-public/dashboard.html
 public/dashboard_backup_20250603_101019.html
+public/dashboard.html
 public/ev_alert_api.py
 public/ev_alert_api.py.json
 public/index.ts
+README.md
 riskAdjuster.ts
+RiskManagementPanel.tsx
 riskManagementService.ts
 schedule_teaka_summary.ps1
+SECURITY.md
 sql_scripts.py
 sql_teaka_dashboard/create_dashboard_metrics.sql
 sql_teaka_dashboard/create_settings.sql
@@ -94,8 +95,8 @@ sql_teaka_dashboard/import_teaka_sql.ps1
 sql_teaka_dashboard/market_prices.csv
 sql_teaka_dashboard/package.json
 sql_teaka_dashboard/scan_postgresql_paths.ps1
-src/.ps1
 src/App.tsx
+src/.ps1
 status_report.yaml
 teaka_file_index.txt
 teaka_trading_app_validate_brain.py
