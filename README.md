@@ -30,6 +30,16 @@ python3 connect_python.py
 
 Bridge listens on `0.0.0.0:5050` (paper-safe).
 
+**Start EVBot from HTML**
+
+```text
+http://127.0.0.1:5050/evbot
+```
+
+Uses your uploaded EVBot GPT instructions + `ev_viral_brain.json`.  
+Button **Start EVBot** hits `/api/evbot/start` (paper-safe bridge online).  
+Full Windows Waitress dual-launch remains in `evbot/EV_Waitress_Launcher.ps1` for local CS.
+
 On a phone that has Python:
 
 **Pythonista3 (your ST_BOOT / Sentinel AL7 path)**
