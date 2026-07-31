@@ -40,31 +40,39 @@ Uses your uploaded EVBot GPT instructions + `ev_viral_brain.json`.
 Button **Start EVBot** hits `/api/evbot/start` (paper-safe bridge online).  
 Full Windows Waitress dual-launch remains in `evbot/EV_Waitress_Launcher.ps1` for local CS.
 
-On a phone that has Python:
+On a phone that has Python / Scriptable:
 
-**Pythonista3 (your ST_BOOT / Sentinel AL7 path)**
+**Scriptable (recommended if you can’t run PC-only)**
 
-1. Copy `phone/pythonista_boot.py` into Pythonista.
-2. Copy `phone/therruedevil7.example.json` → Documents as `therruedevil7.json`.
-3. On the host run `python3 connect_python.py`.
-4. In Pythonista set host then run boot:
+1. Install **Scriptable** on iPhone.
+2. New script → paste `phone/Scriptable_EVBot_Lore.js`.
+3. Set `TEAKA_HOST` inside the script to your PC LAN IP when you want ONLINE.
+4. Run from Scriptable (or add to Shortcuts / home-screen).
+
+Works **OFFLINE on the phone** (writes `therruedevil7.json`, `Cross_device_brain.json`, `evbot_lore_state.json`).  
+If the PC bridge is up, it auto-routes **ONLINE** and calls `/api/evbot/start`.
+
+**Pythonista3 lore script**
+
+Add to your lore boot (or run alone):
 
 ```python
 import os
-os.environ["TEAKA_HOST"] = "http://<pc-lan-ip>:5050"
+os.environ["TEAKA_HOST"] = "http://<pc-lan-ip>:5050"  # optional
 os.environ["ROUTE_MODE"] = "AUTO"
-import pythonista_boot
-pythonista_boot.main()
+import lore_script
+lore_script.main()
 ```
+
+Copy `phone/lore_script.py` + `phone/pythonista_boot.py` into Pythonista Documents.
 
 Expect:
 
 ```text
 ST_BOOT: SENTINEL_AL7_DAEMON_STARTED
-BRAIN_SYNCED: therruedevil7.json -> Cross_device_brain.json route=ONLINE
+BRAIN_SYNCED: therruedevil7.json -> Cross_device_brain.json route=ONLINE|OFFLINE
+LORE_READY: evbot_lore_state.json local_ready=true
 ```
-
-If the host is unreachable you get `route=OFFLINE` (same as your current log).
 
 **Termux / generic**
 
