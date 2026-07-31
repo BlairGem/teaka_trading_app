@@ -2,7 +2,7 @@
 
 ## Current status
 
-**Ready for controlled paper trading with supplied price ticks.**
+**Production-ready for controlled paper trading with supplied price ticks.**
 
 The verified paper path is isolated from exchange order APIs. It creates virtual fills, virtual positions, P/L, fees, slippage, drawdown and JSONL audit logs. Live order submission remains disabled.
 
@@ -84,14 +84,76 @@ This allows historical data, recorded public market data, or a separate public-f
 
 ## Existing project components located
 
+High-level areas:
+
 - React/TypeScript dashboard
 - historical TypeScript backtest engine
 - FastAPI market/prediction prototype
 - KuCoin public-feed prototypes
 - EV runtime and GEMBot integration references
 - PostgreSQL/authentication prototypes
+- verified `paper_trading` broker and CI gate
 
-Some legacy files are prototypes and are not part of the verified paper execution path.
+### TeAka full file list
+
+Canonical inventory also lives in `teaka_file_index.txt`. Current repository map:
+
+```text
+paper_trading/
+  paper_broker.py
+  run_paper.py
+  test_paper_broker.py
+  config.example.json
+  sample_ticks.csv
+
+dashboard/ + src/
+  dashboard/src/App.tsx
+  src/App.tsx
+  package.json
+  RiskManagementPanel.tsx
+  riskManagementService.ts
+  riskAdjuster.ts
+
+api clients/
+  auth.py
+  fastapi.server.py
+  kucoin.asyncio
+  kucoin.client
+  telegram_api.txt
+
+ml models/ + model_output/ + integration_pipeline/
+  backtestEngine.ts / Backtester.ts / Backtest*.ts
+  sklearn model train/evaluate
+  Algoithms/classifier.py, dqn_agent.py, train.rl.py
+  q_learning_trader.py
+  tensorflow.py, train_model.js, model_config.json
+
+sql_teaka_dashboard/ + SQL schemas/
+  create_users.sql
+  create_trades.sql
+  create_settings.sql
+  create_dashboard_metrics.sql
+
+EV / runtime /
+  ev_remote_server.py
+  ev_ollama_bridge.py
+  ev_ollama_auto_bind.py
+  ev_virtual_brain.json
+  bridge/inbox/
+  Config/
+
+ui hooks/ + public/ + templates/
+  main.js, TradingView widgets, dashboard HTML
+  public/dashboard.html, ev_alert_api.py
+
+docs / safety /
+  README.md
+  SECURITY.md
+  .env.example
+  .github/workflows/paper-trading-tests.yml
+```
+
+The verified paper execution path is `paper_trading/` only. Other components are part of the broader TeAka product surface and integrations.
 
 ## Credential security
 
