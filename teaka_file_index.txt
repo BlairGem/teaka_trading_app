@@ -1,40 +1,67 @@
-# TeAka full file index (synced with README)
+# TeAka full file index — complete cut of tracked project files
+# Excludes local venv binaries (*.exe, python/pip, activate scripts, pyvenv.cfg)
+# Verified against repository tree
 
-paper_trading/paper_broker.py
-paper_trading/run_paper.py
-paper_trading/test_paper_broker.py
-paper_trading/config.example.json
-paper_trading/sample_ticks.csv
-dashboard/src/App.tsx
-dashboard/package.json
-src/App.tsx
-package.json
+.env.example
+.github/workflows/paper-trading-tests.yml
+.github/workflows/webpack.yml
+.gitignore
+Config/# Define the EV Shell Runtime Envir.txt
+Config/Repeatable Launch Commands (PowerShell).txt
+Config/backtest_config.json
+Config/ev_keys.json
+README.md
 RiskManagementPanel.tsx
-riskManagementService.ts
-riskAdjuster.ts
+SECURITY.md
+alert_routes.py.py
 api clients/auth.py
+api clients/ev_keys.json
 api clients/fastapi.server.py
 api clients/kucoin.asyncio
 api clients/kucoin.client
 api clients/telegram_api.txt
-api clients/ev_keys.json
-Config/backtest_config.json
-Config/ev_keys.json
-Config/# Define the EV Shell Runtime Envir.txt
-Config/Repeatable Launch Commands (PowerShell).txt
+app.py
+app.py.py
+bridge/inbox/PC5000_GIT_ACCESS_DIAGNOSTIC_001.json
+create_dashboard_metrics.sql
+create_settings.sql
+create_trades.sql
+create_users.sql
+dashboad.zip
+dashboard/package.json
+dashboard/src/App.tsx
+directory.txt
+email_report.py
+ev.remote.server.py.py
+ev_node.py
+ev_ollama_auto_bind.py
+ev_ollama_bridge.py
+ev_remote_server.py
+ev_virtual_brain.json
+flask_api_routes.py
+flask_dashboard_stub.py
+generate_summary.py
+import_sql.ps1
+init_db.py
+initcluster.ps1
+integration_pipeline/QTrader.txt
 integration_pipeline/model_config.json
 integration_pipeline/sample_training_data.json
 integration_pipeline/tensorflow.py
 integration_pipeline/train_model.js
-integration_pipeline/QTrader.txt
-ml models/backtestEngine.ts
-ml models/backtestEngine_1.ts
-ml models/Backtester.ts
-ml models/BacktesterTest.spec.ts
+launcher_shortcut.ps1
+market_prices.csv
+market_screener_table.html
 ml models/BacktestFunction.ts
 ml models/BacktestHistorical.ts
 ml models/BacktestInterval.ts
 ml models/BacktestSummary.ts
+ml models/Backtester.ts
+ml models/BacktesterTest.spec.ts
+ml models/backtestEngine.ts
+ml models/backtestEngine_1.ts
+ml models/gym.env
+ml models/sklearn model/.py
 ml models/sklearn model/evaluate.py
 ml models/sklearn model/sklearn.model.py
 ml models/sklearn model/train.model.py
@@ -43,40 +70,42 @@ model_output/Algoithms/dqn_agent.py
 model_output/Algoithms/train.rl.py
 model_output/BacktestDate.ts
 model_output/q_learning_trader.py
-ui hooks/main.js
-ui hooks/ssl/index.html
-ui hooks/web ui_index.html
-ui hooks/tradingview-widget-ui.txt
+package.json
+paper_trading/config.example.json
+paper_trading/paper_broker.py
+paper_trading/run_paper.py
+paper_trading/sample_ticks.csv
+paper_trading/test_paper_broker.py
 public/dashboard.html
+public/dashboard_backup_20250603_101019.html
 public/ev_alert_api.py
+public/ev_alert_api.py.json
 public/index.ts
-templates/dashboard.html
-templates/ws_feed.py
-sql_teaka_dashboard/create_users.sql
-sql_teaka_dashboard/create_trades.sql
-sql_teaka_dashboard/create_settings.sql
-sql_teaka_dashboard/create_dashboard_metrics.sql
-create_users.sql
-create_trades.sql
-create_settings.sql
-create_dashboard_metrics.sql
-app.py
-ev_ollama_auto_bind.py
-ev_ollama_bridge.py
-ev_remote_server.py
-ev_virtual_brain.json
-init_db.py
-train_model.py
+riskAdjuster.ts
+riskManagementService.ts
+schedule_teaka_summary.ps1
 sql_scripts.py
-generate_summary.py
-email_report.py
-flask_api_routes.py
-flask_dashboard_stub.py
-market_screener_table.html
-README.md
-SECURITY.md
-.env.example
+sql_teaka_dashboard/create_dashboard_metrics.sql
+sql_teaka_dashboard/create_settings.sql
+sql_teaka_dashboard/create_trades.sql
+sql_teaka_dashboard/create_users.sql
+sql_teaka_dashboard/import_sql.ps1
+sql_teaka_dashboard/import_teaka_sql.ps1
+sql_teaka_dashboard/market_prices.csv
+sql_teaka_dashboard/package.json
+sql_teaka_dashboard/scan_postgresql_paths.ps1
+src/.ps1
+src/App.tsx
 status_report.yaml
 teaka_file_index.txt
-.github/workflows/paper-trading-tests.yml
-.github/workflows/webpack.yml
+teaka_trading_app_validate_brain.py
+templates/dashboard.html
+templates/ws_feed.py
+train_model.py
+ui hooks/main.js
+ui hooks/ssl/cloudfare-origin-key.pem
+ui hooks/ssl/cloudfare.origin.pem
+ui hooks/ssl/index.html
+ui hooks/tradingview-widget-ui.txt
+ui hooks/web ui_index.html
+websocket.send_sql
