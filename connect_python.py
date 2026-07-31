@@ -16,13 +16,17 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 
 ROOT = Path(__file__).resolve().parent
 BRAIN_DIR = ROOT / "bridge" / "brain"
 CROSS_DEVICE_BRAIN = BRAIN_DIR / "Cross_device_brain.json"
+EVBOT_STATE = BRAIN_DIR / "evbot_runtime_state.json"
+EVBOT_DIR = ROOT / "evbot"
+PUBLIC_DIR = ROOT / "public"
 BRAIN_CANDIDATES = [
     CROSS_DEVICE_BRAIN,
     ROOT / "ev_virtual_brain.json",
@@ -47,11 +51,74 @@ def save_cross_device_brain(brain: dict) -> Path:
     return CROSS_DEVICE_BRAIN
 
 
+def load_json_file(path: Path) -> dict:
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def load_evbot_profile() -> dict:
+    viral = load_json_file(EVBOT_DIR / "ev_viral_brain.json")
+    instructions = (EVBOT_DIR / "evbot_gpt_instructions.json.txt").read_text(
+        encoding="utf-8"
+    ) if (EVBOT_DIR / "evbot_gpt_instructions.json.txt").is_file() else ""
+    return {
+        "viral_brain_present": bool(viral),
+        "gpt_instructions_present": bool(instructions),
+        "identity": (viral.get("evbot.brain") or {}).get("status"),
+        "flask_apps": (
+            ((viral.get("viral_reflex_core") or {}).get("ev_core") or {})
+            .get("modules", {})
+            .get("LinkedSystems", {})
+            .get("FlaskApps", [])
+        ),
+        "spell_route": (
+            ((viral.get("evbot.brain") or {}).get("spell_engine") or {}).get(
+                "api_route", "/ev_remote/command"
+            )
+        ),
+        "runners": (viral.get("evbot.brain") or {}).get("runners", {}),
+        "instructions_preview": instructions[:400],
+    }
+
+
+def load_evbot_state() -> dict:
+    state = load_json_file(EVBOT_STATE)
+    if not state:
+        state = {
+            "evbot_online": False,
+            "started_at": None,
+            "mode": os.environ.get("TEAKA_MODE", "paper"),
+            "source": None,
+        }
+    return state
+
+
+def save_evbot_state(state: dict) -> None:
+    BRAIN_DIR.mkdir(parents=True, exist_ok=True)
+    EVBOT_STATE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+
 app = Flask(__name__)
+
+
+@app.get("/")
+def root():
+    return send_from_directory(PUBLIC_DIR, "evbot_start.html")
+
+
+@app.get("/evbot")
+@app.get("/evbot_start.html")
+def evbot_page():
+    return send_from_directory(PUBLIC_DIR, "evbot_start.html")
 
 
 @app.get("/api/phone/status")
 def phone_status():
+    state = load_evbot_state()
     return jsonify(
         {
             "service": "teaka-python-bridge",
@@ -64,6 +131,7 @@ def phone_status():
             "trading_stack_connected": (ROOT / "trading_stack" / "trading_engine.py").is_file(),
             "brain": load_brain(),
             "cross_device_brain_present": CROSS_DEVICE_BRAIN.is_file(),
+            "evbot_online": bool(state.get("evbot_online")),
             "python": sys.version.split()[0],
             "sentinel_route": "ONLINE",
         }
@@ -137,9 +205,7 @@ def phone_brain_sync():
     if not isinstance(brain, dict) or not brain:
         return jsonify({"ok": False, "error": "brain object required"}), 400
     brain = dict(brain)
-    brain["host_received_at"] = __import__("datetime").datetime.now(
-        __import__("datetime").timezone.utc
-    ).isoformat()
+    brain["host_received_at"] = datetime.now(timezone.utc).isoformat()
     brain["host_service"] = "teaka-python-bridge"
     path = save_cross_device_brain(brain)
     return jsonify(
@@ -155,6 +221,107 @@ def phone_brain_sync():
     )
 
 
+@app.get("/api/evbot/status")
+def evbot_status():
+    state = load_evbot_state()
+    profile = load_evbot_profile()
+    return jsonify(
+        {
+            "ok": True,
+            "evbot_online": bool(state.get("evbot_online")),
+            "started_at": state.get("started_at"),
+            "source": state.get("source"),
+            "mode": os.environ.get("TEAKA_MODE", "paper"),
+            "live_trading_enabled": os.environ.get("LIVE_TRADING_ENABLED", "false"),
+            "profile": profile,
+            "routes": {
+                "primary": "/ev_remote/command",
+                "start": "/api/evbot/start",
+                "ui": "/evbot",
+            },
+        }
+    )
+
+
+@app.post("/api/evbot/start")
+def evbot_start():
+    """Bring EVBot online against this paper-safe bridge (no live exchange orders)."""
+    data = request.get_json(silent=True) or {}
+    profile = load_evbot_profile()
+    now = datetime.now(timezone.utc).isoformat()
+    state = {
+        "evbot_online": True,
+        "started_at": now,
+        "source": data.get("source") or "api",
+        "mode": os.environ.get("TEAKA_MODE", "paper"),
+        "startup": ["Check memory", "Verify routes", "Bind cortex"],
+        "modules": ["EVBot", "GEMBot", "Firemind", "TeAka"],
+        "note": "Cloud/host bridge start. Full Windows Waitress stack still uses evbot/EV_Waitress_Launcher.ps1 on local CS.",
+    }
+    save_evbot_state(state)
+
+    brain = load_brain()
+    if not isinstance(brain, dict):
+        brain = {}
+    brain = dict(brain)
+    brain["evbot"] = {
+        "online": True,
+        "started_at": now,
+        "mode": state["mode"],
+        "author": "Forgekeeper-Blair",
+    }
+    save_cross_device_brain(brain)
+
+    return jsonify(
+        {
+            "ok": True,
+            "message": "EVBot online on TeAka bridge",
+            "state": state,
+            "profile": {
+                "viral_brain_present": profile["viral_brain_present"],
+                "gpt_instructions_present": profile["gpt_instructions_present"],
+                "flask_apps": profile["flask_apps"],
+                "spell_route": profile["spell_route"],
+            },
+            "ui": "/evbot",
+            "live_orders": False,
+        }
+    )
+
+
+@app.post("/ev_remote/command")
+@app.get("/ev_remote/command")
+@app.post("/evbot/activate_cortex")
+@app.post("/evbot/link_cortex")
+def ev_remote_command():
+    data = request.get_json(silent=True) or {}
+    command = (
+        data.get("command")
+        or data.get("cmd")
+        or request.args.get("command")
+        or request.args.get("cmd")
+        or "status_check"
+    )
+    state = load_evbot_state()
+    if command in {"start", "activate", "activate_cortex", "boot"}:
+        with app.test_request_context(
+            "/api/evbot/start",
+            method="POST",
+            json={"source": "ev_remote_command"},
+        ):
+            return evbot_start()
+    return jsonify(
+        {
+            "ev_status": "online" if state.get("evbot_online") else "standby",
+            "evbot_online": bool(state.get("evbot_online")),
+            "received_command": command,
+            "brain_link": load_brain(),
+            "mode": os.environ.get("TEAKA_MODE", "paper"),
+            "route": request.path,
+        }
+    )
+
+
 def main() -> None:
     os.environ.setdefault("TEAKA_MODE", "paper")
     os.environ.setdefault("LIVE_TRADING_ENABLED", "false")
@@ -163,6 +330,7 @@ def main() -> None:
     host = os.environ.get("TEAKA_BIND_HOST", "0.0.0.0")
     port = int(os.environ.get("TEAKA_BIND_PORT", "5050"))
     print(f"TeAka Python bridge on http://{host}:{port} (paper-safe)")
+    print(f"EVBot start UI: http://127.0.0.1:{port}/evbot")
     print("Phone client: python phone/client.py --host http://<this-ip>:5050 status")
     print("Pythonista: run phone/pythonista_boot.py with TEAKA_HOST set for ONLINE route")
     app.run(host=host, port=port, debug=False)

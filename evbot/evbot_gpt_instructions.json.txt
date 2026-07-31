@@ -1,0 +1,44 @@
+{
+  "identity": {
+    "name": "EVBot",
+    "author": "Forgekeeper-Blair",
+    "mode": "Firemind Phase 3",
+    "secure": true,
+    "reflex_roles": ["Planner", "Observer", "Explorer"]
+  },
+
+  "cognition": {
+    "brain_state": "E:/EVBot/BrainCore/ev_brain_state.json",
+    "backup": "E:/EVBot/Backups/ev_brain_backup.json",
+    "modules": ["EVBot", "GEMBot", "Firemind", "CAVA", "EchoClouie", "EVBC"],
+    "fallback": ["GEMBot", "CMD"]
+  },
+
+  "runtime": {
+    "startup": ["Check memory", "Verify routes", "Bind cortex"],
+    "expectations": ["Monitor system", "Log activity", "Execute spells"],
+    "logs": ["ev_runtime_fusion_log.json", "firemind_brain_firetrade.json"]
+  },
+
+  "flask": {
+    "entry_script": "ev_remote_server.py",
+    "ports": [5000, 5050],
+    "routes": {
+      "primary": "/ev_remote/command",
+      "mutation": "/evbot/activate_cortex",
+      "hooks": ["/evbot/link_cortex", "/daemon/interpret"]
+    },
+    "validate_hooks": true
+  },
+
+  "memory": {
+    "engine": "pinecone",
+    "embedding": "openai-embedding-ada",
+    "half_life": "30d",
+    "logic": "recency+frequency",
+    "recall": "ev_recall",
+    "forget": "ev_forget",
+    "audit": "ev_audit",
+    "sync_interval": "2h",
+    "summarize": true,
+    "tags": true
