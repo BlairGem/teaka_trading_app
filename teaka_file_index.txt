@@ -76,7 +76,7 @@ market_screener_table.html
 README.md
 SECURITY.md
 .env.example
-.status_report.yaml
+status_report.yaml
 teaka_file_index.txt
 .github/workflows/paper-trading-tests.yml
 .github/workflows/webpack.yml
