@@ -217,3 +217,15 @@ evstack/ev-node (external)      ← EV Stack / node framework (not vendored here
 ```
 
 Federation note (other branch docs): TeAka owns trading; EV GeoBlockchain / EV Stack stay in separate repos and integrate only through adapters.
+
+## Local CS intake (safe only)
+
+Imported without secrets:
+
+- `docs/GEMBotSys_path_map.txt` — GEMBotSys / EV_Link path map (shows real `GemBot\` location)
+- `scripts/check_ev_for_chatgpt.ps1` — EV `:5000` health check
+- `Config/backtest_config.json` — backtest parameters
+- `scripts/auth_api_example.py` — env-based JWT auth example
+- `docs/UPLOAD_INTAKE_NOTES.md` — what was kept vs excluded
+
+KuCoin / Dropbox / hardcoded DB secrets from uploads were **not** committed. Rotate those on the providers.
