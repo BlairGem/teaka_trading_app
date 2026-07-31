@@ -21,7 +21,10 @@ from pathlib import Path
 from flask import Flask, jsonify, request
 
 ROOT = Path(__file__).resolve().parent
+BRAIN_DIR = ROOT / "bridge" / "brain"
+CROSS_DEVICE_BRAIN = BRAIN_DIR / "Cross_device_brain.json"
 BRAIN_CANDIDATES = [
+    CROSS_DEVICE_BRAIN,
     ROOT / "ev_virtual_brain.json",
     Path(os.environ.get("TEAKA_BRAIN_FILE", "")),
     Path(r"E:\EV_Files\ev_virtual_brain.json"),
@@ -36,6 +39,12 @@ def load_brain() -> dict:
             except (OSError, json.JSONDecodeError):
                 continue
     return {"status": "brain_missing", "hint": "ev_virtual_brain.json not found"}
+
+
+def save_cross_device_brain(brain: dict) -> Path:
+    BRAIN_DIR.mkdir(parents=True, exist_ok=True)
+    CROSS_DEVICE_BRAIN.write_text(json.dumps(brain, indent=2), encoding="utf-8")
+    return CROSS_DEVICE_BRAIN
 
 
 app = Flask(__name__)
@@ -54,7 +63,9 @@ def phone_status():
             "paper_trading": True,
             "trading_stack_connected": (ROOT / "trading_stack" / "trading_engine.py").is_file(),
             "brain": load_brain(),
+            "cross_device_brain_present": CROSS_DEVICE_BRAIN.is_file(),
             "python": sys.version.split()[0],
+            "sentinel_route": "ONLINE",
         }
     )
 
@@ -114,14 +125,46 @@ def phone_command():
     )
 
 
+@app.get("/api/phone/brain")
+def phone_brain_get():
+    return jsonify({"ok": True, "brain": load_brain(), "path": str(CROSS_DEVICE_BRAIN)})
+
+
+@app.post("/api/phone/brain/sync")
+def phone_brain_sync():
+    data = request.get_json(silent=True) or {}
+    brain = data.get("brain")
+    if not isinstance(brain, dict) or not brain:
+        return jsonify({"ok": False, "error": "brain object required"}), 400
+    brain = dict(brain)
+    brain["host_received_at"] = __import__("datetime").datetime.now(
+        __import__("datetime").timezone.utc
+    ).isoformat()
+    brain["host_service"] = "teaka-python-bridge"
+    path = save_cross_device_brain(brain)
+    return jsonify(
+        {
+            "ok": True,
+            "saved": str(path),
+            "source": data.get("source"),
+            "shared": data.get("shared"),
+            "device": data.get("device"),
+            "sentinel": data.get("sentinel"),
+            "route": "ONLINE",
+        }
+    )
+
+
 def main() -> None:
     os.environ.setdefault("TEAKA_MODE", "paper")
     os.environ.setdefault("LIVE_TRADING_ENABLED", "false")
     os.environ.setdefault("PRIVATE_EXCHANGE_API_ENABLED", "false")
+    BRAIN_DIR.mkdir(parents=True, exist_ok=True)
     host = os.environ.get("TEAKA_BIND_HOST", "0.0.0.0")
     port = int(os.environ.get("TEAKA_BIND_PORT", "5050"))
     print(f"TeAka Python bridge on http://{host}:{port} (paper-safe)")
     print("Phone client: python phone/client.py --host http://<this-ip>:5050 status")
+    print("Pythonista: run phone/pythonista_boot.py with TEAKA_HOST set for ONLINE route")
     app.run(host=host, port=port, debug=False)
 
 

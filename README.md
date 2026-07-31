@@ -30,7 +30,33 @@ python3 connect_python.py
 
 Bridge listens on `0.0.0.0:5050` (paper-safe).
 
-On a phone that has Python (Termux / Pydroid), point at the host LAN IP:
+On a phone that has Python:
+
+**Pythonista3 (your ST_BOOT / Sentinel AL7 path)**
+
+1. Copy `phone/pythonista_boot.py` into Pythonista.
+2. Copy `phone/therruedevil7.example.json` → Documents as `therruedevil7.json`.
+3. On the host run `python3 connect_python.py`.
+4. In Pythonista set host then run boot:
+
+```python
+import os
+os.environ["TEAKA_HOST"] = "http://<pc-lan-ip>:5050"
+os.environ["ROUTE_MODE"] = "AUTO"
+import pythonista_boot
+pythonista_boot.main()
+```
+
+Expect:
+
+```text
+ST_BOOT: SENTINEL_AL7_DAEMON_STARTED
+BRAIN_SYNCED: therruedevil7.json -> Cross_device_brain.json route=ONLINE
+```
+
+If the host is unreachable you get `route=OFFLINE` (same as your current log).
+
+**Termux / generic**
 
 ```bash
 export TEAKA_HOST=http://192.168.x.x:5050
