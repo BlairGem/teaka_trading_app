@@ -1,0 +1,449 @@
+{% extends 'base.html' %}
+
+{% block title %}Market Data - Trading Platform{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h1 class="mb-0">Market Data</h1>
+        <p class="text-muted">Real-time and historical market analysis</p>
+    </div>
+    <div class="col-auto">
+        <button type="button" class="btn btn-outline-primary" id="refresh-data-btn">
+            <i class="fas fa-sync-alt me-2"></i>Refresh Data
+        </button>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <label for="pair-select" class="form-label">Trading Pair</label>
+        <select class="form-select" id="pair-select">
+            {% for pair in pairs %}
+            <option value="{{ pair }}" {% if pair == selected_pair %}selected{% endif %}>{{ pair }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label for="timeframe-select" class="form-label">Timeframe</label>
+        <select class="form-select" id="timeframe-select">
+            {% for tf in timeframes %}
+            <option value="{{ tf }}" {% if tf == timeframe %}selected{% endif %}>{{ tf }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label for="indicator-select" class="form-label">Technical Indicator</label>
+        <select class="form-select" id="indicator-select">
+            <option value="">None</option>
+            <option value="sma">SMA</option>
+            <option value="ema">EMA</option>
+            <option value="rsi">RSI</option>
+            <option value="macd">MACD</option>
+            <option value="bollinger">Bollinger Bands</option>
+        </select>
+    </div>
+    <div class="col-md-3 d-flex align-items-end">
+        <button type="button" class="btn btn-primary w-100" id="update-chart-btn">
+            <i class="fas fa-chart-line me-2"></i>Update Chart
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Price Chart -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Price Chart</h5>
+                <span class="badge bg-success" id="live-indicator">
+                    <i class="fas fa-circle me-1"></i>Live
+                </span>
+            </div>
+            <div class="card-body">
+                <div style="height: 400px; position: relative;">
+                    <canvas id="price-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Current Price & Stats -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Current Price</h5>
+            </div>
+            <div class="card-body" id="current-price-container">
+                <div class="text-center">
+                    <h2 class="text-primary mb-0" id="current-price">Loading...</h2>
+                    <small class="text-muted" id="price-change">Loading...</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>24h Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6 class="text-muted">High</h6>
+                        <p class="mb-0" id="price-high">-</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted">Low</h6>
+                        <p class="mb-0" id="price-low">-</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6 class="text-muted">Volume</h6>
+                        <p class="mb-0" id="volume">-</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted">Change</h6>
+                        <p class="mb-0" id="change-percent">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Technical Analysis -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Technical Analysis</h5>
+            </div>
+            <div class="card-body" id="technical-analysis-container">
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                    <p>Loading technical analysis...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Order Book -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Order Book</h5>
+            </div>
+            <div class="card-body" id="order-book-container">
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                    <p>Loading order book...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Trades -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Trades</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Price</th>
+                                <th>Amount</th>
+                                <th>Total</th>
+                                <th>Side</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-trades-table">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">
+                                    Loading recent trades...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let marketDataChart = null;
+let currentPair = '{{ selected_pair }}';
+let currentTimeframe = '{{ timeframe }}';
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeMarketDataChart();
+    loadMarketData();
+    
+    // Event listeners
+    document.getElementById('pair-select').addEventListener('change', function() {
+        currentPair = this.value;
+        updateURL();
+    });
+    
+    document.getElementById('timeframe-select').addEventListener('change', function() {
+        currentTimeframe = this.value;
+        updateURL();
+    });
+    
+    document.getElementById('update-chart-btn').addEventListener('click', function() {
+        loadMarketData();
+    });
+    
+    document.getElementById('refresh-data-btn').addEventListener('click', function() {
+        loadMarketData();
+    });
+    
+    // Auto-refresh every 30 seconds
+    setInterval(loadMarketData, 30000);
+});
+
+function initializeMarketDataChart() {
+    const ctx = document.getElementById('price-chart').getContext('2d');
+    marketDataChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Price',
+                data: [],
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function loadMarketData() {
+    // Update live indicator
+    const liveIndicator = document.getElementById('live-indicator');
+    liveIndicator.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
+    liveIndicator.className = 'badge bg-warning';
+    
+    // Load current price
+    loadCurrentPrice();
+    
+    // Load historical data for chart
+    loadHistoricalData();
+    
+    // Load technical analysis
+    loadTechnicalAnalysis();
+    
+    // Load order book
+    loadOrderBook();
+    
+    // Load recent trades
+    loadRecentTrades();
+    
+    // Reset live indicator
+    setTimeout(() => {
+        liveIndicator.innerHTML = '<i class="fas fa-circle me-1"></i>Live';
+        liveIndicator.className = 'badge bg-success';
+    }, 2000);
+}
+
+function loadCurrentPrice() {
+    fetch(`/api/market-data/current/${currentPair}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('current-price').textContent = `$${data.price.toFixed(4)}`;
+            document.getElementById('price-change').textContent = `${data.change >= 0 ? '+' : ''}${data.change_percent.toFixed(2)}%`;
+            document.getElementById('price-change').className = data.change >= 0 ? 'text-success' : 'text-danger';
+            
+            document.getElementById('price-high').textContent = `$${data.high_24h.toFixed(4)}`;
+            document.getElementById('price-low').textContent = `$${data.low_24h.toFixed(4)}`;
+            document.getElementById('volume').textContent = data.volume.toLocaleString();
+            document.getElementById('change-percent').textContent = `${data.change >= 0 ? '+' : ''}${data.change_percent.toFixed(2)}%`;
+            document.getElementById('change-percent').className = data.change >= 0 ? 'text-success' : 'text-danger';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading current price:', error);
+        document.getElementById('current-price').textContent = 'Error loading price';
+    });
+}
+
+function loadHistoricalData() {
+    fetch(`/api/market-data/historical/${currentPair}?timeframe=${currentTimeframe}&limit=100`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data.length > 0) {
+            const labels = data.data.map(item => new Date(item.timestamp).toLocaleTimeString());
+            const prices = data.data.map(item => item.close);
+            
+            marketDataChart.data.labels = labels;
+            marketDataChart.data.datasets[0].data = prices;
+            marketDataChart.data.datasets[0].label = `${currentPair} (${currentTimeframe})`;
+            marketDataChart.update();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading historical data:', error);
+    });
+}
+
+function loadTechnicalAnalysis() {
+    const container = document.getElementById('technical-analysis-container');
+    
+    fetch(`/api/market-data/technical-analysis/${currentPair}?timeframe=${currentTimeframe}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            container.innerHTML = `
+                <div class="row">
+                    <div class="col-6">
+                        <h6 class="text-muted">RSI (14)</h6>
+                        <p class="mb-2">${data.rsi ? data.rsi.toFixed(2) : 'N/A'}</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted">MACD</h6>
+                        <p class="mb-2">${data.macd ? data.macd.toFixed(4) : 'N/A'}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <h6 class="text-muted">SMA (20)</h6>
+                        <p class="mb-2">${data.sma_20 ? data.sma_20.toFixed(4) : 'N/A'}</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted">EMA (20)</h6>
+                        <p class="mb-2">${data.ema_20 ? data.ema_20.toFixed(4) : 'N/A'}</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="text-muted">Overall Signal</h6>
+                    <span class="badge ${data.signal === 'BUY' ? 'bg-success' : data.signal === 'SELL' ? 'bg-danger' : 'bg-secondary'}">
+                        ${data.signal || 'NEUTRAL'}
+                    </span>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<p class="text-muted">Technical analysis unavailable</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading technical analysis:', error);
+        container.innerHTML = '<p class="text-danger">Error loading technical analysis</p>';
+    });
+}
+
+function loadOrderBook() {
+    const container = document.getElementById('order-book-container');
+    
+    fetch(`/api/market-data/orderbook/${currentPair}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            container.innerHTML = `
+                <div class="row">
+                    <div class="col-6">
+                        <h6 class="text-success">Bids</h6>
+                        ${data.bids.slice(0, 5).map(bid => `
+                            <div class="d-flex justify-content-between small">
+                                <span>${bid.price.toFixed(4)}</span>
+                                <span>${bid.amount.toFixed(4)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-danger">Asks</h6>
+                        ${data.asks.slice(0, 5).map(ask => `
+                            <div class="d-flex justify-content-between small">
+                                <span>${ask.price.toFixed(4)}</span>
+                                <span>${ask.amount.toFixed(4)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<p class="text-muted">Order book unavailable</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading order book:', error);
+        container.innerHTML = '<p class="text-danger">Error loading order book</p>';
+    });
+}
+
+function loadRecentTrades() {
+    const tbody = document.getElementById('recent-trades-table');
+    
+    fetch(`/api/market-data/trades/${currentPair}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.trades.length > 0) {
+            tbody.innerHTML = data.trades.slice(0, 10).map(trade => `
+                <tr>
+                    <td>${new Date(trade.timestamp).toLocaleTimeString()}</td>
+                    <td>$${trade.price.toFixed(4)}</td>
+                    <td>${trade.amount.toFixed(4)}</td>
+                    <td>$${(trade.price * trade.amount).toFixed(2)}</td>
+                    <td>
+                        <span class="badge ${trade.side === 'buy' ? 'bg-success' : 'bg-danger'}">
+                            ${trade.side.toUpperCase()}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-3">
+                        No recent trades available
+                    </td>
+                </tr>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading recent trades:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-danger py-3">
+                    Error loading recent trades
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function updateURL() {
+    const url = new URL(window.location);
+    url.searchParams.set('pair', currentPair);
+    url.searchParams.set('timeframe', currentTimeframe);
+    window.history.pushState({}, '', url);
+    loadMarketData();
+}
+</script>
+{% endblock %}

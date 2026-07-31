@@ -1,5 +1,5 @@
 # TeAka full file index — complete cut of tracked project files
-# Excludes local venv binaries (*.exe, python/pip, activate scripts, pyvenv.cfg) and __pycache__
+# Excludes local venv binaries, __pycache__, and local sqlite runtimes
 # Verified against repository tree
 
 alert_routes.py.py
@@ -16,6 +16,7 @@ Config/backtest_config.json
 Config/# Define the EV Shell Runtime Envir.txt
 Config/ev_keys.json
 Config/Repeatable Launch Commands (PowerShell).txt
+connect_python.py
 create_dashboard_metrics.sql
 create_settings.sql
 create_trades.sql
@@ -73,13 +74,16 @@ paper_trading/__init__.py
 paper_trading/paper_broker.py
 paper_trading/run_paper.py
 paper_trading/sample_ticks.csv
+paper_trading/state/phone_paper_fills.jsonl
 paper_trading/test_paper_broker.py
+phone/client.py
 public/dashboard_backup_20250603_101019.html
 public/dashboard.html
 public/ev_alert_api.py
 public/ev_alert_api.py.json
 public/index.ts
 README.md
+requirements.txt
 riskAdjuster.ts
 RiskManagementPanel.tsx
 riskManagementService.ts
@@ -102,6 +106,50 @@ teaka_file_index.txt
 teaka_trading_app_validate_brain.py
 templates/dashboard.html
 templates/ws_feed.py
+trading_stack/alpaca_integration.py
+trading_stack/api/__init__.py
+trading_stack/api/routes.py
+trading_stack/app.py
+trading_stack/auth.py
+trading_stack/backtesting.py
+trading_stack/broker_apis.py
+trading_stack/ccxt_integration.py
+trading_stack/config.py
+trading_stack/database.py
+trading_stack/futures_trading.py
+trading_stack/fxcm_integration.py
+trading_stack/generate_hash.py
+trading_stack/__init__.py
+trading_stack/main.py
+trading_stack/market_data.py
+trading_stack/matlab_integration.py
+trading_stack/messaging.py
+trading_stack/ml_models.py
+trading_stack/models.py
+trading_stack/pyproject.toml
+trading_stack/risk_management.py
+trading_stack/signal_generator.py
+trading_stack/static/css/style.css
+trading_stack/static/css/styles.css
+trading_stack/static/js/backtesting.js
+trading_stack/static/js/charts.js
+trading_stack/static/js/dashboard.js
+trading_stack/static/js/websocket.js
+trading_stack/technical_indicators.py
+trading_stack/templates/backtesting.html
+trading_stack/templates/base.html
+trading_stack/templates/dashboard.html
+trading_stack/templates/error.html
+trading_stack/templates/index.html
+trading_stack/templates/login.html
+trading_stack/templates/market_data.html
+trading_stack/templates/profile.html
+trading_stack/templates/register.html
+trading_stack/templates/settings.html
+trading_stack/templates/signals.html
+trading_stack/templates/strategy_editor.html
+trading_stack/trading_engine.py
+trading_stack/unified_trading.py
 train_model.py
 ui hooks/main.js
 ui hooks/ssl/cloudfare-origin-key.pem

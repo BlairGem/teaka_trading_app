@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+
+{% block title %}Trading Signals - Trading Platform{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h1 class="mb-0">Trading Signals</h1>
+        <p class="text-muted">Monitor and manage your automated trading signals</p>
+    </div>
+    <div class="col-auto">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary" id="refresh-signals-btn">
+                <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateSignalModal">
+                <i class="fas fa-plus me-2"></i>Generate Signal
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Signal Filters -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <select class="form-select" id="status-filter">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="executed">Executed</option>
+            <option value="canceled">Canceled</option>
+            <option value="expired">Expired</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="type-filter">
+            <option value="">All Types</option>
+            <option value="BUY">Buy Signals</option>
+            <option value="SELL">Sell Signals</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="pair-filter">
+            <option value="">All Pairs</option>
+            <option value="BTC/USDT">BTC/USDT</option>
+            <option value="ETH/USDT">ETH/USDT</option>
+            <option value="SOL/USDT">SOL/USDT</option>
+            <option value="XAU/USD">XAU/USD</option>
+            <option value="EUR/USD">EUR/USD</option>
+            <option value="GBP/USD">GBP/USD</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <input type="date" class="form-control" id="date-filter" placeholder="Filter by date">
+    </div>
+</div>
+
+<!-- Signals Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">Total Signals</h5>
+                <h2 class="mb-0" id="total-signals">{{ signals|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">Executed</h5>
+                <h2 class="mb-0" id="executed-signals">{{ signals|selectattr("status", "equalto", "executed")|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">Pending</h5>
+                <h2 class="mb-0" id="pending-signals">{{ signals|selectattr("status", "equalto", "pending")|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">Success Rate</h5>
+                <h2 class="mb-0" id="success-rate">
+                    {% set executed = signals|selectattr("status", "equalto", "executed")|list %}
+                    {% if executed|length > 0 %}
+                        {{ ((executed|length / signals|length) * 100)|round(1) }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Signals Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Recent Signals</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="signals-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Strategy</th>
+                                <th>Pair</th>
+                                <th>Type</th>
+                                <th>Entry Price</th>
+                                <th>Stop Loss</th>
+                                <th>Take Profit</th>
+                                <th>Status</th>
+                                <th>Confidence</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if signals %}
+                                {% for signal in signals %}
+                                <tr>
+                                    <td>{{ signal.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if signal.strategy %}
+                                            {{ signal.strategy.name }}
+                                        {% else %}
+                                            Manual
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ signal.trading_pair }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if signal.signal_type == 'BUY' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ signal.signal_type }}
+                                        </span>
+                                    </td>
+                                    <td>${{ "%.4f"|format(signal.entry_price) if signal.entry_price else 'N/A' }}</td>
+                                    <td>${{ "%.4f"|format(signal.stop_loss) if signal.stop_loss else 'N/A' }}</td>
+                                    <td>${{ "%.4f"|format(signal.take_profit) if signal.take_profit else 'N/A' }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if signal.status == 'executed' %}bg-success
+                                            {% elif signal.status == 'pending' %}bg-warning
+                                            {% elif signal.status == 'canceled' %}bg-secondary
+                                            {% elif signal.status == 'expired' %}bg-dark
+                                            {% else %}bg-info{% endif %}">
+                                            {{ signal.status.title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if signal.confidence %}
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar" role="progressbar" 
+                                                     style="width: {{ (signal.confidence * 100)|round }}%"
+                                                     aria-valuenow="{{ (signal.confidence * 100)|round }}" 
+                                                     aria-valuemin="0" aria-valuemax="100">
+                                                    {{ (signal.confidence * 100)|round }}%
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary" onclick="viewSignalDetails({{ signal.id }})">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            {% if signal.status == 'pending' %}
+                                            <button type="button" class="btn btn-outline-success" onclick="executeSignal({{ signal.id }})">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger" onclick="cancelSignal({{ signal.id }})">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="10" class="text-center text-muted py-4">
+                                        <i class="fas fa-bell-slash fa-3x mb-3"></i>
+                                        <p class="mb-0">No trading signals found</p>
+                                        <small>Create a strategy and activate it to generate signals</small>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Signal Modal -->
+<div class="modal fade" id="generateSignalModal" tabindex="-1" aria-labelledby="generateSignalModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="generateSignalModalLabel">Generate Manual Signal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="manual-signal-form">
+                    <div class="mb-3">
+                        <label for="signal-pair" class="form-label">Trading Pair</label>
+                        <select class="form-select" id="signal-pair" name="trading_pair" required>
+                            <option value="BTC/USDT">BTC/USDT</option>
+                            <option value="ETH/USDT">ETH/USDT</option>
+                            <option value="SOL/USDT">SOL/USDT</option>
+                            <option value="XAU/USD">XAU/USD</option>
+                            <option value="EUR/USD">EUR/USD</option>
+                            <option value="GBP/USD">GBP/USD</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="signal-type" class="form-label">Signal Type</label>
+                        <select class="form-select" id="signal-type" name="signal_type" required>
+                            <option value="BUY">Buy Signal</option>
+                            <option value="SELL">Sell Signal</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="entry-price" class="form-label">Entry Price</label>
+                        <input type="number" class="form-control" id="entry-price" name="entry_price" step="0.0001" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="stop-loss-price" class="form-label">Stop Loss</label>
+                        <input type="number" class="form-control" id="stop-loss-price" name="stop_loss" step="0.0001">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="take-profit-price" class="form-label">Take Profit</label>
+                        <input type="number" class="form-control" id="take-profit-price" name="take_profit" step="0.0001">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="signal-confidence" class="form-label">Confidence Level</label>
+                        <input type="range" class="form-range" id="signal-confidence" name="confidence" min="0" max="1" step="0.1" value="0.7">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Low</small>
+                            <small class="text-muted">High</small>
+                        </div>
+                        <div class="text-center">
+                            <span id="confidence-display">70%</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="generate-signal-btn">
+                    <i class="fas fa-plus me-2"></i>Generate Signal
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Signal Details Modal -->
+<div class="modal fade" id="signalDetailsModal" tabindex="-1" aria-labelledby="signalDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="signalDetailsModalLabel">Signal Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="signal-details-content">
+                <!-- Content will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update confidence display
+    const confidenceSlider = document.getElementById('signal-confidence');
+    const confidenceDisplay = document.getElementById('confidence-display');
+    
+    confidenceSlider.addEventListener('input', function() {
+        confidenceDisplay.textContent = Math.round(this.value * 100) + '%';
+    });
+    
+    // Generate signal button
+    document.getElementById('generate-signal-btn').addEventListener('click', generateManualSignal);
+    
+    // Refresh signals button
+    document.getElementById('refresh-signals-btn').addEventListener('click', function() {
+        location.reload();
+    });
+    
+    // Filter functionality
+    document.getElementById('status-filter').addEventListener('change', filterSignals);
+    document.getElementById('type-filter').addEventListener('change', filterSignals);
+    document.getElementById('pair-filter').addEventListener('change', filterSignals);
+    document.getElementById('date-filter').addEventListener('change', filterSignals);
+});
+
+function generateManualSignal() {
+    const form = document.getElementById('manual-signal-form');
+    const formData = new FormData(form);
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const signalData = Object.fromEntries(formData.entries());
+    
+    const generateBtn = document.getElementById('generate-signal-btn');
+    const originalText = generateBtn.innerHTML;
+    generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+    generateBtn.disabled = true;
+    
+    fetch('/api/signals/manual', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(signalData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal and refresh page
+            const modal = bootstrap.Modal.getInstance(document.getElementById('generateSignalModal'));
+            modal.hide();
+            location.reload();
+        } else {
+            throw new Error(data.error || 'Failed to generate signal');
+        }
+    })
+    .catch(error => {
+        console.error('Error generating signal:', error);
+        alert('Failed to generate signal: ' + error.message);
+    })
+    .finally(() => {
+        generateBtn.innerHTML = originalText;
+        generateBtn.disabled = false;
+    });
+}
+
+function executeSignal(signalId) {
+    if (!confirm('Are you sure you want to execute this signal?')) {
+        return;
+    }
+    
+    fetch(`/api/signals/${signalId}/execute`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to execute signal: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error executing signal:', error);
+        alert('Failed to execute signal');
+    });
+}
+
+function cancelSignal(signalId) {
+    if (!confirm('Are you sure you want to cancel this signal?')) {
+        return;
+    }
+    
+    fetch(`/api/signals/${signalId}/cancel`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to cancel signal: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error canceling signal:', error);
+        alert('Failed to cancel signal');
+    });
+}
+
+function viewSignalDetails(signalId) {
+    fetch(`/api/signals/${signalId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const signal = data.signal;
+            const content = document.getElementById('signal-details-content');
+            
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>ID:</strong></td><td>${signal.id}</td></tr>
+                            <tr><td><strong>Trading Pair:</strong></td><td>${signal.trading_pair}</td></tr>
+                            <tr><td><strong>Signal Type:</strong></td><td><span class="badge ${signal.signal_type === 'BUY' ? 'bg-success' : 'bg-danger'}">${signal.signal_type}</span></td></tr>
+                            <tr><td><strong>Status:</strong></td><td><span class="badge bg-secondary">${signal.status}</span></td></tr>
+                            <tr><td><strong>Timestamp:</strong></td><td>${new Date(signal.timestamp).toLocaleString()}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Price Levels</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Entry Price:</strong></td><td>$${signal.entry_price || 'N/A'}</td></tr>
+                            <tr><td><strong>Stop Loss:</strong></td><td>$${signal.stop_loss || 'N/A'}</td></tr>
+                            <tr><td><strong>Take Profit:</strong></td><td>$${signal.take_profit || 'N/A'}</td></tr>
+                            <tr><td><strong>Confidence:</strong></td><td>${signal.confidence ? Math.round(signal.confidence * 100) + '%' : 'N/A'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+                ${signal.signal_data ? `
+                    <div class="mt-3">
+                        <h6>Additional Data</h6>
+                        <pre class="bg-light p-3 rounded"><code>${JSON.stringify(JSON.parse(signal.signal_data), null, 2)}</code></pre>
+                    </div>
+                ` : ''}
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('signalDetailsModal'));
+            modal.show();
+        } else {
+            alert('Failed to load signal details');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading signal details:', error);
+        alert('Failed to load signal details');
+    });
+}
+
+function filterSignals() {
+    const statusFilter = document.getElementById('status-filter').value;
+    const typeFilter = document.getElementById('type-filter').value;
+    const pairFilter = document.getElementById('pair-filter').value;
+    const dateFilter = document.getElementById('date-filter').value;
+    
+    const rows = document.querySelectorAll('#signals-table tbody tr');
+    
+    rows.forEach(row => {
+        const cells = row.cells;
+        if (cells.length <= 1) return; // Skip empty state row
+        
+        const timestamp = cells[0].textContent;
+        const pair = cells[2].textContent.trim();
+        const type = cells[3].textContent.trim();
+        const status = cells[7].textContent.trim().toLowerCase();
+        
+        let showRow = true;
+        
+        if (statusFilter && !status.includes(statusFilter.toLowerCase())) {
+            showRow = false;
+        }
+        
+        if (typeFilter && !type.includes(typeFilter)) {
+            showRow = false;
+        }
+        
+        if (pairFilter && !pair.includes(pairFilter)) {
+            showRow = false;
+        }
+        
+        if (dateFilter && !timestamp.includes(dateFilter)) {
+            showRow = false;
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

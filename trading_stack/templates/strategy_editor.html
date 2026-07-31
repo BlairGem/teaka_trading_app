@@ -1,0 +1,612 @@
+{% extends 'base.html' %}
+
+{% block title %}Strategy Editor - Trading Platform{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h1 class="mb-0">Strategy Editor</h1>
+        <p class="text-muted">{% if strategy %}Edit{% else %}Create{% endif %} your automated trading strategy</p>
+    </div>
+    <div class="col-auto">
+        {% if strategy %}
+        <a href="{{ url_for('strategy_editor') }}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-plus me-2"></i>New Strategy
+        </a>
+        {% endif %}
+        <button type="button" class="btn btn-success" id="save-strategy-btn">
+            <i class="fas fa-save me-2"></i>Save Strategy
+        </button>
+    </div>
+</div>
+
+<form id="strategy-form">
+    <div class="row">
+        <!-- Basic Configuration -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Basic Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="strategy-name" class="form-label">Strategy Name</label>
+                        <input type="text" class="form-control" id="strategy-name" name="name" value="{{ strategy.name if strategy else '' }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="strategy-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="strategy-description" name="description" rows="3">{{ strategy.description if strategy else '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="trading-pairs" class="form-label">Trading Pairs</label>
+                        <select class="form-select" id="trading-pairs" name="trading_pairs" multiple>
+                            <option value="BTC/USDT">BTC/USDT</option>
+                            <option value="ETH/USDT">ETH/USDT</option>
+                            <option value="SOL/USDT">SOL/USDT</option>
+                            <option value="BNB/USDT">BNB/USDT</option>
+                            <option value="ADA/USDT">ADA/USDT</option>
+                            <option value="EUR/USD">EUR/USD</option>
+                            <option value="GBP/USD">GBP/USD</option>
+                            <option value="USD/JPY">USD/JPY</option>
+                        </select>
+                        <div class="form-text">Hold Ctrl/Cmd to select multiple pairs</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="timeframe" class="form-label">Timeframe</label>
+                        <select class="form-select" id="timeframe" name="timeframe">
+                            <option value="1m">1 Minute</option>
+                            <option value="5m">5 Minutes</option>
+                            <option value="15m">15 Minutes</option>
+                            <option value="30m">30 Minutes</option>
+                            <option value="1h" selected>1 Hour</option>
+                            <option value="4h">4 Hours</option>
+                            <option value="1d">1 Day</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="is-active" name="is_active" {% if strategy and strategy.is_active %}checked{% endif %}>
+                        <label class="form-check-label" for="is-active">
+                            Activate Strategy
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Technical Indicators -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Technical Indicators</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-indicator-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="indicators-container">
+                        <!-- Indicators will be added dynamically -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Risk Management -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Risk Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="risk-per-trade" class="form-label">Risk per Trade (%)</label>
+                        <input type="number" class="form-control" id="risk-per-trade" name="risk_per_trade_pct" value="{{ strategy.risk_per_trade_pct if strategy else '1.0' }}" step="0.1" min="0.1" max="10">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="stop-loss" class="form-label">Stop Loss (%)</label>
+                        <input type="number" class="form-control" id="stop-loss" name="stop_loss_pct" value="{{ strategy.stop_loss_pct if strategy else '2.0' }}" step="0.1" min="0.1">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="take-profit" class="form-label">Take Profit (%)</label>
+                        <input type="number" class="form-control" id="take-profit" name="take_profit_pct" value="{{ strategy.take_profit_pct if strategy else '4.0' }}" step="0.1" min="0.1">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Entry & Exit Conditions -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Entry Conditions</h5>
+                    <button type="button" class="btn btn-sm btn-outline-success" id="add-entry-condition-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="entry-conditions-container">
+                        <!-- Entry conditions will be added dynamically -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-sign-out-alt me-2"></i>Exit Conditions</h5>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="add-exit-condition-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="exit-conditions-container">
+                        <!-- Exit conditions will be added dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Strategy Preview -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Strategy Preview</h5>
+            </div>
+            <div class="card-body">
+                <pre id="strategy-preview" class="bg-dark text-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Indicator Modal -->
+<div class="modal fade" id="indicatorModal" tabindex="-1" aria-labelledby="indicatorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="indicatorModalLabel">Add Technical Indicator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="indicator-form">
+                    <div class="mb-3">
+                        <label for="indicator-type" class="form-label">Indicator Type</label>
+                        <select class="form-select" id="indicator-type">
+                            {% for indicator in indicators %}
+                            <option value="{{ indicator }}">{{ indicator }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="indicator-parameters">
+                        <!-- Parameters will be loaded based on selected indicator -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="add-indicator-confirm">Add Indicator</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Condition Modal -->
+<div class="modal fade" id="conditionModal" tabindex="-1" aria-labelledby="conditionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="conditionModalLabel">Add Condition</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="condition-form">
+                    <div class="mb-3">
+                        <label for="condition-indicator" class="form-label">Indicator</label>
+                        <select class="form-select" id="condition-indicator">
+                            <option value="price">Price</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="condition-operator" class="form-label">Operator</label>
+                        <select class="form-select" id="condition-operator">
+                            <option value=">">&gt; (Greater than)</option>
+                            <option value="<">&lt; (Less than)</option>
+                            <option value=">=">&gt;= (Greater than or equal)</option>
+                            <option value="<=">&lt;= (Less than or equal)</option>
+                            <option value="==">=== (Equal)</option>
+                            <option value="crosses_above">Crosses Above</option>
+                            <option value="crosses_below">Crosses Below</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="condition-value" class="form-label">Value</label>
+                        <input type="number" class="form-control" id="condition-value" step="0.0001">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="add-condition-confirm">Add Condition</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let strategyData = {
+    indicators: [],
+    entryConditions: [],
+    exitConditions: []
+};
+
+let currentConditionType = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load existing strategy data if editing
+    {% if strategy %}
+    loadExistingStrategy();
+    {% endif %}
+    
+    // Event listeners
+    document.getElementById('add-indicator-btn').addEventListener('click', showIndicatorModal);
+    document.getElementById('add-entry-condition-btn').addEventListener('click', () => showConditionModal('entry'));
+    document.getElementById('add-exit-condition-btn').addEventListener('click', () => showConditionModal('exit'));
+    document.getElementById('save-strategy-btn').addEventListener('click', saveStrategy);
+    document.getElementById('add-indicator-confirm').addEventListener('click', addIndicator);
+    document.getElementById('add-condition-confirm').addEventListener('click', addCondition);
+    
+    // Update preview when form changes
+    document.getElementById('strategy-form').addEventListener('change', updatePreview);
+    
+    // Initial preview update
+    updatePreview();
+});
+
+function loadExistingStrategy() {
+    // Load trading pairs
+    const tradingPairs = {{ strategy.get_trading_pairs() | tojson if strategy else '[]' }};
+    const pairSelect = document.getElementById('trading-pairs');
+    for (let option of pairSelect.options) {
+        if (tradingPairs.includes(option.value)) {
+            option.selected = true;
+        }
+    }
+    
+    // Load timeframe
+    document.getElementById('timeframe').value = '{{ strategy.timeframe if strategy else "1h" }}';
+    
+    // Load indicators
+    strategyData.indicators = {{ strategy.get_indicators_config() | tojson if strategy else '[]' }};
+    renderIndicators();
+    
+    // Load conditions
+    strategyData.entryConditions = {{ strategy.get_entry_conditions() | tojson if strategy else '[]' }};
+    strategyData.exitConditions = {{ strategy.get_exit_conditions() | tojson if strategy else '[]' }};
+    renderConditions();
+}
+
+function showIndicatorModal() {
+    const modal = new bootstrap.Modal(document.getElementById('indicatorModal'));
+    modal.show();
+    
+    // Load parameters for default indicator
+    loadIndicatorParameters();
+    
+    document.getElementById('indicator-type').addEventListener('change', loadIndicatorParameters);
+}
+
+function loadIndicatorParameters() {
+    const indicatorType = document.getElementById('indicator-type').value;
+    const container = document.getElementById('indicator-parameters');
+    
+    let parametersHTML = '';
+    
+    switch(indicatorType.toLowerCase()) {
+        case 'sma':
+        case 'ema':
+            parametersHTML = `
+                <div class="mb-3">
+                    <label for="period" class="form-label">Period</label>
+                    <input type="number" class="form-control" id="period" name="period" value="20" min="1">
+                </div>
+            `;
+            break;
+        case 'rsi':
+            parametersHTML = `
+                <div class="mb-3">
+                    <label for="period" class="form-label">Period</label>
+                    <input type="number" class="form-control" id="period" name="period" value="14" min="1">
+                </div>
+            `;
+            break;
+        case 'macd':
+            parametersHTML = `
+                <div class="mb-3">
+                    <label for="fast-period" class="form-label">Fast Period</label>
+                    <input type="number" class="form-control" id="fast-period" name="fast_period" value="12" min="1">
+                </div>
+                <div class="mb-3">
+                    <label for="slow-period" class="form-label">Slow Period</label>
+                    <input type="number" class="form-control" id="slow-period" name="slow_period" value="26" min="1">
+                </div>
+                <div class="mb-3">
+                    <label for="signal-period" class="form-label">Signal Period</label>
+                    <input type="number" class="form-control" id="signal-period" name="signal_period" value="9" min="1">
+                </div>
+            `;
+            break;
+        case 'bollinger bands':
+            parametersHTML = `
+                <div class="mb-3">
+                    <label for="period" class="form-label">Period</label>
+                    <input type="number" class="form-control" id="period" name="period" value="20" min="1">
+                </div>
+                <div class="mb-3">
+                    <label for="std-dev" class="form-label">Standard Deviation</label>
+                    <input type="number" class="form-control" id="std-dev" name="std_dev" value="2" step="0.1" min="0.1">
+                </div>
+            `;
+            break;
+    }
+    
+    container.innerHTML = parametersHTML;
+}
+
+function addIndicator() {
+    const type = document.getElementById('indicator-type').value;
+    const form = document.getElementById('indicator-form');
+    const formData = new FormData(form);
+    
+    const parameters = {};
+    for (let [key, value] of formData.entries()) {
+        if (key !== 'indicator-type') {
+            parameters[key] = parseFloat(value) || value;
+        }
+    }
+    
+    const indicator = {
+        type: type,
+        parameters: parameters,
+        id: Date.now() // Simple ID for removal
+    };
+    
+    strategyData.indicators.push(indicator);
+    renderIndicators();
+    updatePreview();
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('indicatorModal'));
+    modal.hide();
+}
+
+function renderIndicators() {
+    const container = document.getElementById('indicators-container');
+    
+    if (strategyData.indicators.length === 0) {
+        container.innerHTML = '<p class="text-muted">No indicators added yet</p>';
+        return;
+    }
+    
+    container.innerHTML = strategyData.indicators.map(indicator => `
+        <div class="indicator-item border rounded p-2 mb-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${indicator.type}</strong>
+                    <small class="text-muted d-block">${JSON.stringify(indicator.parameters)}</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeIndicator(${indicator.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function removeIndicator(id) {
+    strategyData.indicators = strategyData.indicators.filter(ind => ind.id !== id);
+    renderIndicators();
+    updatePreview();
+}
+
+function showConditionModal(type) {
+    currentConditionType = type;
+    document.getElementById('conditionModalLabel').textContent = `Add ${type.charAt(0).toUpperCase() + type.slice(1)} Condition`;
+    
+    // Update indicator options
+    const indicatorSelect = document.getElementById('condition-indicator');
+    indicatorSelect.innerHTML = '<option value="price">Price</option>';
+    
+    strategyData.indicators.forEach(indicator => {
+        indicatorSelect.innerHTML += `<option value="${indicator.type.toLowerCase()}_${indicator.id}">${indicator.type}</option>`;
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('conditionModal'));
+    modal.show();
+}
+
+function addCondition() {
+    const indicator = document.getElementById('condition-indicator').value;
+    const operator = document.getElementById('condition-operator').value;
+    const value = parseFloat(document.getElementById('condition-value').value);
+    
+    const condition = {
+        indicator: indicator,
+        operator: operator,
+        value: value,
+        id: Date.now()
+    };
+    
+    if (currentConditionType === 'entry') {
+        strategyData.entryConditions.push(condition);
+    } else {
+        strategyData.exitConditions.push(condition);
+    }
+    
+    renderConditions();
+    updatePreview();
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('conditionModal'));
+    modal.hide();
+}
+
+function renderConditions() {
+    // Render entry conditions
+    const entryContainer = document.getElementById('entry-conditions-container');
+    if (strategyData.entryConditions.length === 0) {
+        entryContainer.innerHTML = '<p class="text-muted">No entry conditions</p>';
+    } else {
+        entryContainer.innerHTML = strategyData.entryConditions.map(condition => `
+            <div class="condition-item border rounded p-2 mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small>${condition.indicator} ${condition.operator} ${condition.value}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCondition('entry', ${condition.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Render exit conditions
+    const exitContainer = document.getElementById('exit-conditions-container');
+    if (strategyData.exitConditions.length === 0) {
+        exitContainer.innerHTML = '<p class="text-muted">No exit conditions</p>';
+    } else {
+        exitContainer.innerHTML = strategyData.exitConditions.map(condition => `
+            <div class="condition-item border rounded p-2 mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small>${condition.indicator} ${condition.operator} ${condition.value}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCondition('exit', ${condition.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+function removeCondition(type, id) {
+    if (type === 'entry') {
+        strategyData.entryConditions = strategyData.entryConditions.filter(cond => cond.id !== id);
+    } else {
+        strategyData.exitConditions = strategyData.exitConditions.filter(cond => cond.id !== id);
+    }
+    renderConditions();
+    updatePreview();
+}
+
+function updatePreview() {
+    const formData = new FormData(document.getElementById('strategy-form'));
+    const selectedPairs = Array.from(document.getElementById('trading-pairs').selectedOptions).map(option => option.value);
+    
+    const preview = {
+        name: formData.get('name') || 'Unnamed Strategy',
+        description: formData.get('description') || '',
+        trading_pairs: selectedPairs,
+        timeframe: formData.get('timeframe'),
+        indicators: strategyData.indicators,
+        entry_conditions: strategyData.entryConditions,
+        exit_conditions: strategyData.exitConditions,
+        risk_management: {
+            risk_per_trade_pct: parseFloat(formData.get('risk_per_trade_pct')),
+            stop_loss_pct: parseFloat(formData.get('stop_loss_pct')),
+            take_profit_pct: parseFloat(formData.get('take_profit_pct'))
+        },
+        is_active: formData.get('is_active') === 'on'
+    };
+    
+    document.getElementById('strategy-preview').textContent = JSON.stringify(preview, null, 2);
+}
+
+function saveStrategy() {
+    const form = document.getElementById('strategy-form');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const formData = new FormData(form);
+    const selectedPairs = Array.from(document.getElementById('trading-pairs').selectedOptions).map(option => option.value);
+    
+    const strategyPayload = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        trading_pairs: selectedPairs,
+        timeframe: formData.get('timeframe'),
+        indicators_config: strategyData.indicators,
+        entry_conditions: strategyData.entryConditions,
+        exit_conditions: strategyData.exitConditions,
+        risk_per_trade_pct: parseFloat(formData.get('risk_per_trade_pct')),
+        stop_loss_pct: parseFloat(formData.get('stop_loss_pct')),
+        take_profit_pct: parseFloat(formData.get('take_profit_pct')),
+        is_active: formData.get('is_active') === 'on'
+    };
+    
+    const saveBtn = document.getElementById('save-strategy-btn');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+    saveBtn.disabled = true;
+    
+    const url = {% if strategy %}'/api/strategies/{{ strategy.id }}'{% else %}'/api/strategies'{% endif %};
+    const method = {% if strategy %}'PUT'{% else %}'POST'{% endif %};
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(strategyPayload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                <strong>Success!</strong> Strategy saved successfully.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.row'));
+            
+            // Redirect to strategies list or stay on editor
+            setTimeout(() => {
+                window.location.href = '/strategy-editor?id=' + data.strategy_id;
+            }, 2000);
+        } else {
+            throw new Error(data.error || 'Failed to save strategy');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving strategy:', error);
+        
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = `
+            <strong>Error!</strong> ${error.message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container').insertBefore(alert, document.querySelector('.row'));
+    })
+    .finally(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    });
+}
+</script>
+{% endblock %}

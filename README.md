@@ -19,6 +19,26 @@ Live exchange order submission in this fork remains **disabled**.
 
 ## Ready to run now (verified)
 
+### Connect Python (host + phone)
+
+On the host (PC / cloud):
+
+```bash
+pip3 install -r requirements.txt
+python3 connect_python.py
+```
+
+Bridge listens on `0.0.0.0:5050` (paper-safe).
+
+On a phone that has Python (Termux / Pydroid), point at the host LAN IP:
+
+```bash
+export TEAKA_HOST=http://192.168.x.x:5050
+python phone/client.py status
+python phone/client.py paper
+python phone/client.py command ping
+```
+
 ### Paper trading
 
 ```text
@@ -57,42 +77,28 @@ Safety: `paper_trading/` imports **no** exchange SDK and has **no** private orde
 
 ---
 
-## Full trading engine (sibling repo)
+## Full trading engine (connected here + sibling)
 
-The complete strategy → signal → risk → broker engine lives in:
+Connected into this repo as **`trading_stack/`** (from [`TeAkaTrader/BoltBuddy`](https://github.com/TeAkaTrader/BoltBuddy)).
 
-**[`TeAkaTrader/BoltBuddy`](https://github.com/TeAkaTrader/BoltBuddy)**  
-(Replit: `replit.com/@gee8/BoltBuddy`)
+Live order gates stay **off** unless all of these are set:
+
+```text
+TEAKA_MODE=live
+LIVE_TRADING_ENABLED=true
+PRIVATE_EXCHANGE_API_ENABLED=true
+```
 
 | Module | Role |
 |--------|------|
-| `trading_engine.py` | Main loop: active strategies → signals → risk → optional auto-execute |
-| `unified_trading.py` | Unified manager across crypto / forex / stocks |
-| `signal_generator.py` | Technical + ML signal generation |
-| `broker_apis.py` | KuCoin / OANDA / Interactive Brokers order APIs |
-| `ccxt_integration.py` | CCXT exchanges (KuCoin, Binance, Coinbase, …) |
-| `fxcm_integration.py` / `alpaca_integration.py` | Forex / stocks |
-| `futures_trading.py` | KuCoin + IB futures |
-| `risk_management.py` | Position size, exposure, portfolio risk |
-| `ml_models.py` / `backtesting.py` | ML models and backtests |
-| `messaging.py` | Telegram + Discord + email alert bots |
-| `models.py` | Users, strategies, signals, executions, ML models |
-| `api/routes.py` | Flask `/api/*` for prices, charts, strategies, trades |
-| `templates/strategy_editor.html` | Strategy “bot” editor UI |
-| `main.py` / `app.py` | Flask app on port 5000 |
-
-Engine flow:
-
-```text
-TradingStrategy (active)
-  → generate_signals_for_strategy()
-  → check_risk_limits() + calculate_position_size()
-  → notify (Telegram / Discord / email)
-  → execute_trade_from_signal() if automated trading enabled
-  → broker_apis / unified_trading / futures
-```
-
-Do **not** enable live keys in this recovery fork until credentials are rotated and a separate live-trading review is done. See `SECURITY.md`.
+| `trading_stack/trading_engine.py` | Main loop: strategies → signals → risk → gated execute |
+| `trading_stack/unified_trading.py` | Crypto / forex / stocks manager |
+| `trading_stack/signal_generator.py` | Technical + ML signals |
+| `trading_stack/broker_apis.py` | KuCoin / OANDA / IB APIs |
+| `trading_stack/messaging.py` | Telegram + Discord alert bots |
+| `trading_stack/models.py` | Users, strategies, signals (`enable_automated_trading` defaults false) |
+| `phone/client.py` | Phone Python client for the bridge |
+| `connect_python.py` | Paper-safe host bridge for phone / LAN |
 
 ---
 

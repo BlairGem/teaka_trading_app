@@ -1,0 +1,369 @@
+{% extends 'base.html' %}
+
+{% block title %}Backtesting - Trading Platform{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h1 class="mb-0">Backtesting</h1>
+        <p class="text-muted">Test your trading strategies against historical data</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('strategy_editor') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create Strategy
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Backtest Configuration -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Backtest Configuration</h5>
+            </div>
+            <div class="card-body">
+                <form id="backtest-form">
+                    <div class="mb-3">
+                        <label for="strategy-select" class="form-label">Strategy</label>
+                        <select class="form-select" id="strategy-select" name="strategy_id" required>
+                            <option value="" disabled selected>Select a strategy</option>
+                            {% for strategy in strategies %}
+                            <option value="{{ strategy.id }}">{{ strategy.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="trading-pair-select" class="form-label">Trading Pair</label>
+                        <select class="form-select" id="trading-pair-select" name="trading_pair" required>
+                            <option value="" disabled selected>Select trading pair</option>
+                            {% for pair in pairs %}
+                            <option value="{{ pair }}">{{ pair }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="timeframe-select" class="form-label">Timeframe</label>
+                        <select class="form-select" id="timeframe-select" name="timeframe" required>
+                            {% for tf in timeframes %}
+                            <option value="{{ tf }}" {% if tf == '1h' %}selected{% endif %}>{{ tf }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="start-date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start-date" name="start_date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="end-date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end-date" name="end_date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="initial-balance" class="form-label">Initial Balance</label>
+                        <input type="number" class="form-control" id="initial-balance" name="initial_balance" value="10000" min="100" step="100" required>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-play me-2"></i>Run Backtest
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Backtest Results -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Backtest Results</h5>
+                <div id="backtest-status" class="d-none">
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span class="text-muted">Running backtest...</span>
+                </div>
+            </div>
+            <div class="card-body" id="backtest-results-container">
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-chart-line fa-3x mb-3"></i>
+                    <p class="mb-0">Configure and run a backtest to see results</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Previous Backtests -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Previous Backtests</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Strategy</th>
+                                <th>Trading Pair</th>
+                                <th>Period</th>
+                                <th>Initial Balance</th>
+                                <th>Final Balance</th>
+                                <th>Return</th>
+                                <th>Total Trades</th>
+                                <th>Win Rate</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previous-backtests-table">
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-3">
+                                    No previous backtests found
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Backtest Details Modal -->
+<div class="modal fade" id="backtestDetailsModal" tabindex="-1" aria-labelledby="backtestDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="backtestDetailsModalLabel">Backtest Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="backtest-details-content">
+                <!-- Content will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default dates (last 3 months)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 3);
+    
+    document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+    document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+    
+    // Handle backtest form submission
+    document.getElementById('backtest-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        runBacktest();
+    });
+    
+    // Load previous backtests
+    loadPreviousBacktests();
+});
+
+function runBacktest() {
+    const form = document.getElementById('backtest-form');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Show loading state
+    const statusElement = document.getElementById('backtest-status');
+    const resultsContainer = document.getElementById('backtest-results-container');
+    
+    statusElement.classList.remove('d-none');
+    resultsContainer.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="text-muted">Running backtest, this may take a few moments...</p>
+        </div>
+    `;
+    
+    // Submit backtest request
+    fetch('/api/backtesting/run', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        statusElement.classList.add('d-none');
+        
+        if (result.success) {
+            displayBacktestResults(result.data);
+            loadPreviousBacktests(); // Refresh the table
+        } else {
+            resultsContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    <h6>Backtest Failed</h6>
+                    <p class="mb-0">${result.error || 'An error occurred while running the backtest'}</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        statusElement.classList.add('d-none');
+        resultsContainer.innerHTML = `
+            <div class="alert alert-danger">
+                <h6>Error</h6>
+                <p class="mb-0">Failed to run backtest. Please check your network connection and try again.</p>
+            </div>
+        `;
+        console.error('Backtest error:', error);
+    });
+}
+
+function displayBacktestResults(data) {
+    const container = document.getElementById('backtest-results-container');
+    
+    const returnPct = ((data.final_balance - data.initial_balance) / data.initial_balance * 100).toFixed(2);
+    const winRate = data.total_trades > 0 ? (data.winning_trades / data.total_trades * 100).toFixed(1) : 0;
+    
+    container.innerHTML = `
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Total Return</h5>
+                        <h3>${returnPct}%</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Final Balance</h5>
+                        <h3>$${data.final_balance.toLocaleString()}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Total Trades</h5>
+                        <h3>${data.total_trades}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Win Rate</h5>
+                        <h3>${winRate}%</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <h6>Performance Metrics</h6>
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Profit Factor</span>
+                        <strong>${data.profit_factor || 'N/A'}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Max Drawdown</span>
+                        <strong>${data.max_drawdown_pct ? data.max_drawdown_pct.toFixed(2) + '%' : 'N/A'}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Sharpe Ratio</span>
+                        <strong>${data.sharpe_ratio || 'N/A'}</strong>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6>Trade Statistics</h6>
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Winning Trades</span>
+                        <strong class="text-success">${data.winning_trades}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Losing Trades</span>
+                        <strong class="text-danger">${data.losing_trades}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Average Trade</span>
+                        <strong>$${data.total_trades > 0 ? ((data.final_balance - data.initial_balance) / data.total_trades).toFixed(2) : '0.00'}</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    `;
+}
+
+function loadPreviousBacktests() {
+    fetch('/api/backtesting/history')
+    .then(response => response.json())
+    .then(data => {
+        const tbody = document.getElementById('previous-backtests-table');
+        
+        if (data.success && data.backtests.length > 0) {
+            tbody.innerHTML = data.backtests.map(backtest => {
+                const returnPct = ((backtest.final_balance - backtest.initial_balance) / backtest.initial_balance * 100).toFixed(2);
+                const winRate = backtest.total_trades > 0 ? (backtest.winning_trades / backtest.total_trades * 100).toFixed(1) : 0;
+                
+                return `
+                    <tr>
+                        <td>${backtest.strategy_name}</td>
+                        <td>${backtest.trading_pair}</td>
+                        <td>${new Date(backtest.start_date).toLocaleDateString()} - ${new Date(backtest.end_date).toLocaleDateString()}</td>
+                        <td>$${backtest.initial_balance.toLocaleString()}</td>
+                        <td>$${backtest.final_balance.toLocaleString()}</td>
+                        <td class="${returnPct >= 0 ? 'text-success' : 'text-danger'}">${returnPct}%</td>
+                        <td>${backtest.total_trades}</td>
+                        <td>${winRate}%</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewBacktestDetails(${backtest.id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-3">
+                        No previous backtests found
+                    </td>
+                </tr>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading previous backtests:', error);
+    });
+}
+
+function viewBacktestDetails(backtestId) {
+    // Load detailed backtest results
+    fetch(`/api/backtesting/details/${backtestId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show detailed results in modal
+            const modal = new bootstrap.Modal(document.getElementById('backtestDetailsModal'));
+            modal.show();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading backtest details:', error);
+    });
+}
+</script>
+{% endblock %}

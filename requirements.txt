@@ -1,0 +1,12 @@
+# Minimal deps for paper path + phone bridge
+flask>=3.0.0
+
+# Optional: full BoltBuddy trading_stack bring-up (install only when needed)
+# See trading_stack/pyproject.toml for the complete dependency set.
+# flask-login>=0.6.3
+# flask-sqlalchemy>=3.1.1
+# pandas>=2.2.0
+# numpy>=1.26.0
+# requests>=2.32.0
+# scikit-learn>=1.4.0
+# ccxt>=4.0.0
