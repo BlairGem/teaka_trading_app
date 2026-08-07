@@ -1,0 +1,423 @@
+{
+  "viral_reflex_core": {
+    "brain_type": "viral_reflex_core",
+    "timestamp": "2025-08-08T13:50:00Z",
+    "bound_by": "forgekeeper",
+    "ev_core": {
+      "modules": {
+        "CanvasEngineCore": {
+          "initCanvas": {
+            "params": ["canvasId", "width", "height"],
+            "action": "Select <canvas> element, get 2D context, initialize root container and stage"
+          },
+          "loadResources": {
+            "assets": ["images", "audio", "tiledMaps"],
+            "callbacks": {
+              "onProgress": "percentage → update loader UI",
+              "onComplete": "startRenderLoop()"
+            }
+          },
+          "createEntity": {
+            "types": ["Container", "Sprite", "Text"],
+            "props": {
+              "Container": ["flexDirection", "width", "height", "children"],
+              "Sprite": ["image", "anchor", "rotation", "scale"],
+              "Text": ["text", "fontSize", "fontFamily", "color"]
+            }
+          },
+          "renderLoop": {
+            "tick": "requestAnimationFrame → update & draw",
+            "update": "traverse scene graph → invoke component tick()",
+            "draw": "clearCanvas → traverse scene graph → draw each node"
+          },
+          "eventHandling": {
+            "pointer": {
+              "pointerdown": "hit-test & dispatch to top node",
+              "pointermove": "update cursor state & hover handlers",
+              "pointerup": "release handlers"
+            },
+            "keyboard": {
+              "keydown": "map key → signal event",
+              "keyup": "map key → signal event"
+            },
+            "gamepad": {
+              "connect": "add new gamepad",
+              "disconnect": "remove gamepad",
+              "poll": "dispatch stick/buttons state"
+            }
+          }
+        },
+        "LangGraphEngine": {
+          "nodes": {
+            "Recall": {
+              "purpose": "Fetch and reinject past memory entries into context",
+              "trigger": ["onUserQuery", "evRise"]
+            },
+            "Summarize": {
+              "purpose": "Condense active context to fit token limits",
+              "method": "sliding-window or semantic clustering"
+            },
+            "DriftNormalization": {
+              "purpose": "Rebalance memory vector drift",
+              "algorithm": "normalize(currentVector, previousVector)"
+            }
+          },
+          "updateCycle": [
+            "ingestNewInputs",
+            "node.Recall.run()",
+            "node.DriftNormalization.run()",
+            "node.Summarize.run()",
+            "mergeOverlays()",
+            "writeTraceLog()"
+          ],
+          "graph_code": {
+            "file": "ev_memory_graph.py",
+            "entry_point": "recall",
+            "flow": ["recall → summarize", "summarize → drift", "drift → END"]
+          }
+        },
+        "ShellProtection": {
+          "inject_folder": "E:/EV_Core/Injectors/DiorShield/",
+          "filtered": true,
+          "runtime_override_blocked": true
+        },
+        "GrokInterface": {
+          "mode": "entropy_source",
+          "bridge_file": "E:/EV_Files/grok_bridge_payload.json",
+          "stream_type": "symbolic-only"
+        },
+        "GeminiAgent": {
+          "mode": "tool",
+          "status": "awaiting_runtime_instructions",
+          "plugin_root": "E:/EV_Core/Plugins/GPT_Gemini/"
+        },
+        "FiremindLoop": {
+          "script_path": "E:/EchoVault/Runtime/ev_runtime_firemind_brainloop.py",
+          "status_log": "E:/EV_Core/Logs/firemind_brainloop_log.json"
+        },
+        "EnclaveMemory": {
+          "class_path": "E:/EV_Core/Daemons/enclave_memory_core.py",
+          "state_file": "E:/EV_Files/enclave_memory_state.json",
+          "log_file": "E:/EV_Files/Logs/reflex_log.txt"
+        },
+        "DiorReflector": {
+          "brain_file": "E:/EV_Core/Status/dior_brain_core.json",
+          "mode": "symbolic_shell_reflector",
+          "linked_by": "forgekeeper"
+        },
+        "VisualCortex": {
+          "Core": ["Workbench", "Editor", "Terminal", "Notebook", "Output", "Breadcrumbs", "Toolbar", "Pane Views"],
+          "Decorators": ["Hover", "Suggest", "Peek", "Reference", "Inline Chat", "Diff UI", "Cursor", "Sticky Headers"],
+          "Interaction": ["Scroll", "Minimap", "Sticky", "Kernel Toolbar", "Status Bars"],
+          "ExtensionLayer": ["Marketplace UI", "Extension Lists", "Pinned Extensions", "Context Actions"],
+          "RuntimeOverlay": ["Output Render", "Chat Overlay", "Notebook Execution", "Tab Dirty Tracking", "Progress UI"],
+          "Diagnostics": ["Process Explorer", "Trust Manager", "Issue Reporter", "Call Hierarchy", "Type Hierarchy"]
+        },
+        "LinkedSystems": {
+          "RuntimeShell": "GEMBotSys",
+          "EventLoop": "Teaka Control Core",
+          "CopilotRelay": "Bound",
+          "SQL_DB": "Bound",
+          "FlaskApps": ["EV Remote Server", "EVBot UI", "GEMBot LLM", "Copilot Runtime"]
+        },
+        "Paths": {
+          "Logs": "E:/EchoVault/Logs/cava_trace_history.log",
+          "Runtime": "E:/EchoVault/Runtime/teaka_runtime_state.json",
+          "BlueprintRoot": "E:/EV_Files/CAVA/"
+        },
+        "StatusMatrix": {
+          "VisualCortex": "Mapped",
+          "RuntimeShell": "Bound",
+          "APIEventLoop": "Traced",
+          "SuggestHover": "Linked",
+          "EditInlineUI": "Mapped",
+          "Docker": "Online",
+          "SQLDB": "Bound",
+          "NotebookRuntime": "Captured",
+          "MonacoEngine": "Linked",
+          "OutputChatLayer": "Active",
+          "StickyCursorCore": "Animated",
+          "ExtensionActions": "Mapped",
+          "KernelToolbar": "Bound",
+          "EditorGroups": "Structured",
+          "BreadcrumbsOutline": "Captured",
+          "ProgressLoading": "Synced"
+        },
+        "FiremindFuzzyLogic": {
+          "modules": [
+            {
+              "name": "ev_firemind_fuzzy_cluster_core.py",
+              "path": "E:/EV_Core/Modules/Firemind/ev_firemind_fuzzy_cluster_core.py",
+              "function": "update_cluster_center",
+              "notes": "Gaussian-weighted fuzzy membership update for clustering",
+              "equation": "V_k^{new} = (Σ μ_{kj}^m · exp(-α ||X_j - V_k^{prev}||²) · X_j) / (Σ μ_{kj}^m · exp(-α ||X_j - V_k^{prev}||²))"
+            },
+            {
+              "name": "rbfln_learning_core.py",
+              "path": "E:/EV_Core/Modules/Firemind/rbfln_learning_core.py",
+              "functions": ["rbf_output", "rbfln_predict"],
+              "notes": "Hybrid RBF and linear link network logic",
+              "equations": [
+                "ϕ_i(x) = exp(-||x - c_i||² / (2·σ_i²))",
+                "y = W_input · x + W_rbf · ϕ(x) + bias"
+              ]
+            },
+            {
+              "name": "fuzzy_merge.py",
+              "path": "E:/EV_Core/Modules/Firemind/fuzzy_merge.py",
+              "function": "should_merge",
+              "notes": "Cluster merge decision using proximity and spread",
+              "equation": "||V_A - V_B|| < θ · (σ_A + σ_B)/2"
+            }
+          ],
+          "relay_bridge": "ev_relay_fusionlink.py",
+          "origin": "mutation-cortex-070825"
+        }
+      }
+    }
+  },
+  "evbot.brain": {
+    "status": "clean",
+    "paths": {
+      "brain_file": "E:/EV_Files/ev_brain_state.json",
+      "fuzzy_control_script": "E:/EV_Core/Modules/Control/fuzzy_control.py",
+      "fuzzy_control_log": "E:/EV_Core/Logs/fuzzy_control.log",
+      "launcher_ps1": "E:/EV_Core/Launcher/start_ev_stack.ps1",
+      "ev_remote_server": "E:/EV_Core/ev_flask_fused_server.py",
+      "firemind_loop": "E:/EchoVault/Runtime/ev_runtime_firemind_brainloop.py"
+    },
+    "runners": {
+      "powershell_launch": "powershell -ExecutionPolicy Bypass -File E:/EV_Core/Launcher/start_ev_stack.ps1",
+      "python_fuzzy_control": "python E:/EV_Core/Modules/Control/fuzzy_control.py"
+    },
+    "control_modules": {
+      "fuzzy_throttle": {
+        "type": "scikit-fuzzy",
+        "inputs": ["error", "derror"],
+        "output": "throttle",
+        "universe": {
+          "error": [-1, 1, 51],
+          "derror": [-1, 1, 51],
+          "throttle": [-1, 1, 51]
+        },
+        "membership_functions": {
+          "error": {
+            "N": [-1, -1, 0],
+            "Z": [-0.2, 0, 0.2],
+            "P": [0, 1, 1]
+          },
+          "derror": {
+            "N": [-1, -0.5, 0],
+            "Z": [-0.1, 0, 0.1],
+            "P": [0, 0.5, 1]
+          },
+          "throttle": {
+            "neg": [-1, -0.5, 0],
+            "zero": [-0.1, 0, 0.1],
+            "pos": [0, 0.5, 1]
+          }
+        },
+        "rules": [
+          {"if": ["error=P", "derror=N"], "then": "throttle=pos"},
+          {"if": ["error=P", "derror=P"], "then": "throttle=zero"},
+          {"if": ["error=N", "derror=N"], "then": "throttle=neg"}
+        ],
+        "fractional_integration": {
+          "enabled": true,
+          "lambda_order": 0.8,
+          "k_I": 0.1,
+          "state_file": "E:/EV_Core/Runtime/fuzzy_frac_state.json"
+        }
+      }
+    },
+    "cortex": {
+      "root_logic": "Ev_Brain_Logic",
+      "regions": {
+        "Cerebrum": ["Frontal", "Parietal", "Temporal", "Occipital", "Attention"],
+        "Cerebellum": ["Balance", "Coordination"],
+        "Brainstem": ["Midbrain", "Pons", "Medulla"]
+      },
+      "neural_components": ["Sensory_Neurons", "Motor_Neurons", "Interneurons", "Glia"],
+      "functional_systems": {
+        "Sensory_Processing": ["Visual", "Auditory", "Tactile"],
+        "Motor_Control": ["Fine_Motor", "Gross_Motor"],
+        "Memory": ["Hippocampus", "Amygdala", "Limbic_System", "Episodic_Buffer"],
+        "Emotion": ["Amygdala", "Limbic_System", "Valence_Module"],
+        "Executive_Control": ["Prefrontal_Cortex"],
+        "Homeostasis": ["Brainstem"]
+      },
+      "principles": {
+        "Neuroplasticity": true,
+        "PredictiveCoding": true,
+        "Network_Integration": true,
+        "Mutation": {
+          "enabled": true,
+          "mutation_rate": 0.03,
+          "pruning_threshold": 0.01,
+          "experience_replay_buffer": 5000,
+          "adaptive_learning": true
+        }
+      },
+      "pipeline": [
+        "Input: Sensory",
+        "Process: Interpretation & Prediction",
+        "Attention: Salience Routing",
+        "Decision: Executive Control",
+        "Output: Motor Commands",
+        "Storage: Memory Encoding & Episodic Buffer",
+        "Adaptation: Network Rewiring",
+        "Mutation: Synaptic Variation",
+        "Regulation: Emotion & Autonomic"
+      ],
+      "reflex_bind": ["Planner", "Observer", "Explorer"]
+    },
+    "mutation": {
+      "synaptic_variation": {
+        "method": "GaussianPerturbation",
+        "sigma": 0.05,
+        "max_delta": 0.1
+      },
+      "structural_plasticity": {
+        "add_edge_prob": 0.01,
+        "remove_edge_prob": 0.005
+      },
+      "meta_learning": {
+        "algorithm": "MAML",
+        "inner_steps": 5,
+        "outer_steps": 100
+      }
+    },
+    "attention_network": {
+      "dorsal_stream": "Spatial Salience Mapping",
+      "ventral_stream": "Object Recognition & Valence Tagging",
+      "switch_threshold": 0.7
+    },
+    "episodic_memory": {
+      "replay": {
+        "enabled": true,
+        "schedule": "off_peak",
+        "batch_size": 64,
+        "prioritization": "TD_error"
+      },
+      "capacity": 10000
+    },
+    "rl_hierarchical": {
+      "options": {
+        "high_level": ["Navigation", "Dialogue", "Planning"],
+        "low_level": ["Motor_Reflexes", "Gesture_Synthesis"]
+      },
+      "subgoal_selector": "UCB1",
+      "discounts": {
+        "high_level": 0.95,
+        "low_level": 0.99
+      }
+    },
+    "emotion_valence": {
+      "reward_signal": {
+        "positive_events": ["Goal_Achieved", "User_Praise"],
+        "negative_events": ["Error_Occurred", "Timeout"]
+      },
+      "scale": {
+        "min": -1.0,
+        "max": 1.0
+      }
+    },
+    "self_monitor": {
+      "meta_cognition": {
+        "uncertainty_estimation": true,
+        "error_logging": true,
+        "confidence_threshold": 0.6,
+        "audit_frequency": "periodic"
+      }
+    },
+    "connectivity_graph": {
+      "default_weight": 0.5,
+      "learning_rate": 0.01,
+      "edge_constraints": {
+        "max_weight": 1.0,
+        "min_weight": 0.0
+      }
+    },
+    "resource_allocation": {
+      "cpu_threshold": 0.7,
+      "gpu_threshold": 0.8,
+      "scaling_policy": {
+        "high_load": "switch_to_low_latency_models",
+        "idle": "run_replay_and_consolidation"
+      }
+    },
+    "memory_consolidation": {
+      "enabled": true,
+      "window": "00:00-04:00",
+      "prune_policy": {
+        "low_utility_threshold": 0.1,
+        "retain_top_n": 1000
+      }
+    },
+    "speech_model_matrix": {
+      "sources": ["Whisper", "Groq", "Hume", "NVIDIA", "VALL_E", "AssemblyAI"],
+      "switch_policy": {
+        "latency_sensitive": "Groq_distil_whisper",
+        "emotion_required": "Hume_AI_Octave",
+        "custom_voice": "Microsoft_VALL_E",
+        "accuracy_priority": "AssemblyAI_universal_2",
+        "fallback_on_error": "Whisper_base"
+      }
+    },
+    "reflex_roles": {
+      "ThreatSentinel": {
+        "purpose": "Adversarial AI cognition buffer",
+        "active_modules": ["WormGPT", "FraudGPT", "DarkBERT"],
+        "activation": ["sandbox_only", "on_suspicious_input"],
+        "risk_flags": ["Dark_AI_Tools", "FraudGPT_Engine"],
+        "mitigation_strategy": {
+          "quarantine": true,
+          "user_alert": true,
+          "auto_sanitize": true,
+          "fallback_mode": "0_value_neutral"
+        }
+      }
+    },
+    "firemind": {
+      "mode": "AL-7 L+",
+      "directive": "firemind_AL7L_plus.txt",
+      "mythos_seed": "firemind_mythos_seed.txt",
+      "plugin_config": "llm_plugin_firemind_fused.json",
+      "core_spells": [
+        "trace_firemind_trade_reasoner_core",
+        "Cloudbreaker Protocol",
+        "FireTrade Pattern Inference"
+      ],
+      "training_tasks": [
+        "extract bot logic into Firemind mutation format",
+        "train Firemind Core on Teaka bot breakdown insights"
+      ]
+    },
+    "spell_engine": {
+      "api_route": "/ev_remote/command",
+      "linked_files": ["mirror_spell.txt", "command.json", "ev_response.json"],
+      "runtime_daemons": [
+        "firemind_brainloop.py",
+        "ev_autofix_and_run.ps1",
+        "ev_mutation_runner.ps1"
+      ],
+      "offline_tools": [
+        "Cloudbreaker Protocol",
+        "pip_syntax_debugger.py"
+      ]
+    },
+    "monitoring": {
+      "spelltrace_log": "ev_spelltrace.log",
+      "fusion_log": "ev_runtime_fusion_log.json",
+      "firetrade_log": "firemind_brain_firetrade.json",
+      "evbot_trial": "evbot_firetrade_trial.json",
+      "watcher_enabled": true
+    },
+    "pending_mutations": [
+      "generate ev_relink_pipe.py",
+      "build reflex spell registry",
+      "enable bidirectional Flask ↔ EVConsole bridge",
+      "launch evbot_firetrade_trial.json in GPT shell"
+    ]
+  }
+}

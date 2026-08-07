@@ -1,0 +1,217 @@
+/* Custom styles for Trading Web Application */
+
+/* Dark theme adjustments */
+body {
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
+}
+
+/* Card styling */
+.card {
+    margin-bottom: 1.5rem;
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    background-color: var(--bs-dark-bg-subtle);
+}
+
+.card-header {
+    font-weight: 600;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Trading signals */
+.signal-buy {
+    color: var(--bs-success);
+}
+
+.signal-sell {
+    color: var(--bs-danger);
+}
+
+/* Chart container */
+.chart-container {
+    width: 100%;
+    height: 400px;
+    margin-bottom: 1.5rem;
+}
+
+/* Backtesting results */
+.backtest-results {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Strategy editor */
+.condition-block {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Price data */
+.price-up {
+    color: var(--bs-success);
+}
+
+.price-down {
+    color: var(--bs-danger);
+}
+
+.price-unchanged {
+    color: var(--bs-warning);
+}
+
+/* Dashboard widgets */
+.dashboard-widget {
+    height: 100%;
+}
+
+/* Trading form */
+.trading-form-container {
+    background-color: var(--bs-dark-bg-subtle);
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 1.5rem;
+}
+
+/* Notification styling */
+.notification {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: var(--bs-dark-bg-subtle);
+    border-left: 4px solid var(--bs-primary);
+}
+
+.notification-success {
+    border-left-color: var(--bs-success);
+}
+
+.notification-warning {
+    border-left-color: var(--bs-warning);
+}
+
+.notification-danger {
+    border-left-color: var(--bs-danger);
+}
+
+/* Nav tabs styling */
+.nav-tabs .nav-link {
+    color: var(--bs-light);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--bs-dark-bg-subtle);
+    border-color: var(--bs-primary) var(--bs-dark) var(--bs-dark);
+    border-top: 3px solid var(--bs-primary);
+    color: var(--bs-light);
+}
+
+/* Trading pair pills */
+.trading-pair-pill {
+    background-color: var(--bs-dark-bg-subtle);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--bs-light);
+    font-size: 0.85rem;
+    padding: 2px 8px;
+    border-radius: 15px;
+    display: inline-block;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+
+.trading-pair-pill:hover {
+    background-color: var(--bs-primary);
+}
+
+/* Sidebar styling */
+.sidebar {
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    background-color: var(--bs-dark-bg-subtle);
+    padding-top: 1rem;
+}
+
+/* Loading spinner */
+.loader {
+    border: 5px solid var(--bs-dark);
+    border-top: 5px solid var(--bs-primary);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Table styling */
+.table {
+    color: var(--bs-light);
+}
+
+.table-dark th {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Position table highlighting */
+.position-profit {
+    background-color: rgba(25, 135, 84, 0.2) !important;
+}
+
+.position-loss {
+    background-color: rgba(220, 53, 69, 0.2) !important;
+}
+
+/* Settings sections */
+.settings-section {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: var(--bs-dark-bg-subtle);
+    border-radius: 5px;
+}
+
+/* Error message */
+.error-message {
+    color: var(--bs-danger);
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+}
+
+/* Login/Register forms */
+.auth-container {
+    max-width: 400px;
+    margin: 2rem auto;
+}
+
+.auth-card {
+    padding: 1.5rem;
+    border-radius: 10px;
+    background-color: var(--bs-dark-bg-subtle);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.auth-logo {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chart-container {
+        height: 300px;
+    }
+    
+    .sidebar {
+        height: auto;
+        position: static;
+    }
+}

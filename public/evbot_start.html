@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EVBot Start — TeAka Forge</title>
+  <style>
+    :root {
+      --bg0: #0b1020;
+      --bg1: #141c33;
+      --ink: #e8eefc;
+      --muted: #9aa8c7;
+      --accent: #3d8bfd;
+      --ok: #3ecf8e;
+      --warn: #f0b429;
+      --line: rgba(232, 238, 252, 0.12);
+      --font-display: "Segoe UI", "Trebuchet MS", sans-serif;
+      --font-body: "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #1a2a55 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #243018 0%, transparent 50%),
+        linear-gradient(160deg, var(--bg0), var(--bg1));
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 48px 20px 64px;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 6vw, 3.6rem);
+      letter-spacing: -0.03em;
+      margin: 0 0 8px;
+      animation: rise 0.7s ease both;
+    }
+    .sub {
+      color: var(--muted);
+      max-width: 40rem;
+      line-height: 1.5;
+      margin-bottom: 28px;
+      animation: rise 0.8s ease both;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      background: rgba(10, 14, 28, 0.55);
+      padding: 22px;
+      animation: rise 0.9s ease both;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    button, .ghost {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: var(--accent);
+      color: white;
+      font: inherit;
+      padding: 12px 18px;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    button.secondary { background: transparent; color: var(--ink); }
+    button:disabled { opacity: 0.5; cursor: wait; transform: none; }
+    label { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }
+    input {
+      width: min(100%, 420px);
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,0.35);
+      color: var(--ink);
+      font: inherit;
+      margin-bottom: 14px;
+    }
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--line);
+      font-size: 0.85rem;
+      line-height: 1.45;
+      min-height: 180px;
+    }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .pill {
+      border: 1px solid var(--line);
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .pill.on { color: var(--ok); border-color: rgba(62,207,142,0.45); }
+    .pill.off { color: var(--warn); }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>EVBot</h1>
+    <p class="sub">
+      Forgekeeper start panel. Talks to the TeAka Python bridge and brings EVBot online
+      in paper-safe mode (SwarmTrader / Firemind Phase 3 config from your GPT HTML).
+    </p>
+
+    <div class="panel">
+      <label for="host">Bridge host</label>
+      <input id="host" value="" placeholder="http://127.0.0.1:5050" />
+
+      <div class="pills" id="pills">
+        <span class="pill" id="pill-bridge">bridge: …</span>
+        <span class="pill" id="pill-evbot">evbot: …</span>
+        <span class="pill" id="pill-mode">mode: …</span>
+      </div>
+
+      <div class="row">
+        <button id="btn-status" class="secondary" type="button">Status</button>
+        <button id="btn-start" type="button">Start EVBot</button>
+        <button id="btn-command" class="secondary" type="button">Send status_check</button>
+        <button id="btn-paper" class="secondary" type="button">Paper run</button>
+      </div>
+
+      <pre id="out">Ready.</pre>
+    </div>
+  </div>
+
+  <script>
+    const out = document.getElementById("out");
+    const hostInput = document.getElementById("host");
+    const params = new URLSearchParams(location.search);
+    hostInput.value = params.get("host") || localStorage.getItem("teaka_host") || "http://127.0.0.1:5050";
+
+    function host() {
+      const value = hostInput.value.replace(/\/$/, "");
+      localStorage.setItem("teaka_host", value);
+      return value;
+    }
+
+    function setPill(id, text, on) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = "pill " + (on ? "on" : "off");
+    }
+
+    async function call(path, method = "GET", body) {
+      const opts = { method, headers: { Accept: "application/json" } };
+      if (body !== undefined) {
+        opts.headers["Content-Type"] = "application/json";
+        opts.body = JSON.stringify(body);
+      }
+      const res = await fetch(host() + path, opts);
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      if (!res.ok) throw new Error((data && data.error) || text || res.statusText);
+      return data;
+    }
+
+    function show(data) {
+      out.textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function refreshStatus() {
+      const data = await call("/api/evbot/status");
+      setPill("pill-bridge", "bridge: online", true);
+      setPill("pill-evbot", "evbot: " + (data.evbot_online ? "online" : "offline"), !!data.evbot_online);
+      setPill("pill-mode", "mode: " + (data.mode || "?"), data.mode === "paper");
+      show(data);
+      return data;
+    }
+
+    document.getElementById("btn-status").onclick = async () => {
+      try { await refreshStatus(); }
+      catch (err) {
+        setPill("pill-bridge", "bridge: offline", false);
+        setPill("pill-evbot", "evbot: unknown", false);
+        out.textContent = String(err);
+      }
+    };
+
+    document.getElementById("btn-start").onclick = async (ev) => {
+      const btn = ev.currentTarget;
+      btn.disabled = true;
+      try {
+        const data = await call("/api/evbot/start", "POST", { source: "evbot_start.html" });
+        show(data);
+        await refreshStatus();
+      } catch (err) {
+        out.textContent = String(err);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    document.getElementById("btn-command").onclick = async () => {
+      try { show(await call("/api/phone/command", "POST", { command: "status_check" })); }
+      catch (err) { out.textContent = String(err); }
+    };
+
+    document.getElementById("btn-paper").onclick = async () => {
+      try { show(await call("/api/phone/paper-run", "POST", {})); }
+      catch (err) { out.textContent = String(err); }
+    };
+
+    refreshStatus().catch(() => {
+      setPill("pill-bridge", "bridge: offline", false);
+      setPill("pill-evbot", "evbot: unknown", false);
+      out.textContent = "Bridge offline. Run: python3 connect_python.py";
+    });
+  </script>
+</body>
+</html>

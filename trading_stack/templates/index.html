@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}Trading Platform - Advanced Automated Trading{% endblock %}
+
+{% block content %}
+<div class="hero-section text-center py-5 mb-5">
+    <div class="container">
+        <h1 class="display-4 fw-bold text-primary mb-4">
+            <i class="fas fa-chart-line me-3"></i>Advanced Trading Platform
+        </h1>
+        <p class="lead mb-4">
+            Automate your FOREX and cryptocurrency trading with cutting-edge algorithms, 
+            machine learning models, and real-time market analysis.
+        </p>
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="d-grid gap-2 d-md-block">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-md-2">
+                        <i class="fas fa-user-plus me-2"></i>Get Started
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row mb-5">
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon bg-primary bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 4rem; height: 4rem; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-robot fa-2x"></i>
+                    </div>
+                    <h4 class="card-title">Automated Trading</h4>
+                    <p class="card-text text-muted">
+                        Deploy sophisticated trading strategies that execute automatically based on technical indicators and market conditions.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon bg-success bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 4rem; height: 4rem; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-brain fa-2x"></i>
+                    </div>
+                    <h4 class="card-title">Machine Learning</h4>
+                    <p class="card-text text-muted">
+                        Leverage advanced ML models including LSTM networks and Random Forest algorithms for predictive trading signals.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon bg-info bg-gradient text-white rounded-circle mb-3 mx-auto" style="width: 4rem; height: 4rem; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-chart-area fa-2x"></i>
+                    </div>
+                    <h4 class="card-title">Real-time Analytics</h4>
+                    <p class="card-text text-muted">
+                        Monitor live market data, track your portfolio performance, and receive instant notifications on trading opportunities.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-3">
+                        <i class="fas fa-cogs me-2 text-primary"></i>Technical Features
+                    </h3>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>50+ Technical Indicators</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Advanced Backtesting Engine</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Risk Management Tools</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Multi-Exchange Support</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>MATLAB Integration</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Real-time Alerts</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-3">
+                        <i class="fas fa-exchange-alt me-2 text-primary"></i>Supported Markets
+                    </h3>
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted mb-2">Cryptocurrency</h5>
+                            <ul class="list-unstyled small">
+                                <li>BTC/USDT</li>
+                                <li>ETH/USDT</li>
+                                <li>SOL/USDT</li>
+                                <li>BNB/USDT</li>
+                                <li class="text-muted">+ 6 more pairs</li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <h5 class="text-muted mb-2">Forex</h5>
+                            <ul class="list-unstyled small">
+                                <li>EUR/USD</li>
+                                <li>GBP/USD</li>
+                                <li>USD/JPY</li>
+                                <li>AUD/USD</li>
+                                <li class="text-muted">+ 6 more pairs</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body text-center p-5">
+                    <h2 class="card-title mb-3">Ready to Start Trading?</h2>
+                    <p class="card-text mb-4">
+                        Join thousands of traders who trust our platform for automated trading solutions.
+                        Set up your account in minutes and start building profitable strategies today.
+                    </p>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-rocket me-2"></i>Create Your Account
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hero-section {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.1) 0%, rgba(25, 135, 84, 0.1) 100%);
+    border-radius: 15px;
+    margin-bottom: 3rem;
+}
+
+.feature-icon {
+    transition: transform 0.3s ease;
+}
+
+.card:hover .feature-icon {
+    transform: scale(1.1);
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+</style>
+{% endblock %}

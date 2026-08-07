@@ -13,6 +13,9 @@ paper_trading/state/
 *.jsonl
 logs/
 *.log
+*.db
+instance/
+bridge/brain/
 
 # Python
 __pycache__/

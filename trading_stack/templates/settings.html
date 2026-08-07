@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings - Trading Platform{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h1 class="mb-0">Settings</h1>
+        <p class="text-muted">Configure your trading platform preferences</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="list-group" id="settings-tabs" role="tablist">
+            <a class="list-group-item list-group-item-action active" id="api-connections-tab" data-bs-toggle="list" href="#api-connections" role="tab" aria-controls="api-connections">
+                <i class="fas fa-plug me-2"></i>API Connections
+            </a>
+            <a class="list-group-item list-group-item-action" id="notification-settings-tab" data-bs-toggle="list" href="#notification-settings" role="tab" aria-controls="notification-settings">
+                <i class="fas fa-bell me-2"></i>Notifications
+            </a>
+            <a class="list-group-item list-group-item-action" id="risk-management-tab" data-bs-toggle="list" href="#risk-management" role="tab" aria-controls="risk-management">
+                <i class="fas fa-shield-alt me-2"></i>Risk Management
+            </a>
+            <a class="list-group-item list-group-item-action" id="appearance-tab" data-bs-toggle="list" href="#appearance" role="tab" aria-controls="appearance">
+                <i class="fas fa-palette me-2"></i>Appearance
+            </a>
+            <a class="list-group-item list-group-item-action" id="strategy-defaults-tab" data-bs-toggle="list" href="#strategy-defaults" role="tab" aria-controls="strategy-defaults">
+                <i class="fas fa-sliders-h me-2"></i>Strategy Defaults
+            </a>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="tab-content">
+            <!-- API Connections -->
+            <div class="tab-pane fade show active" id="api-connections" role="tabpanel" aria-labelledby="api-connections-tab">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0" id="kucoin-api">KuCoin API Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('update_kucoin_api') }}">
+                            <div class="mb-3">
+                                <label for="kucoin-api-key" class="form-label">KuCoin API Key</label>
+                                <input type="text" class="form-control" id="kucoin-api-key" name="kucoin_api_key" value="{{ current_user.kucoin_api_key or '' }}">
+                                <div class="form-text">Enter your KuCoin API key for spot and futures trading</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="kucoin-api-secret" class="form-label">KuCoin API Secret</label>
+                                <input type="password" class="form-control" id="kucoin-api-secret" name="kucoin_api_secret" value="{{ current_user.kucoin_api_secret or '' }}">
+                                <div class="form-text">Enter your KuCoin API secret</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="kucoin-passphrase" class="form-label">KuCoin Passphrase</label>
+                                <input type="password" class="form-control" id="kucoin-passphrase" name="kucoin_passphrase" value="{{ current_user.kucoin_passphrase or '' }}">
+                                <div class="form-text">Enter your KuCoin API passphrase</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save KuCoin API Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0" id="ib-api">Interactive Brokers API Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('update_ib_api') }}">
+                            <div class="mb-3">
+                                <label for="ib-api-key" class="form-label">IB API Key</label>
+                                <input type="text" class="form-control" id="ib-api-key" name="ib_api_key" value="{{ current_user.ib_api_key or '' }}">
+                                <div class="form-text">Enter your Interactive Brokers API key</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="ib-account-id" class="form-label">IB Account ID</label>
+                                <input type="text" class="form-control" id="ib-account-id" name="ib_account_id" value="{{ current_user.ib_account_id or '' }}">
+                                <div class="form-text">Enter your Interactive Brokers account ID</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Interactive Brokers Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0" id="oanda-api">OANDA API Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('update_oanda_api') }}">
+                            <div class="mb-3">
+                                <label for="oanda-api-key" class="form-label">OANDA API Key</label>
+                                <input type="text" class="form-control" id="oanda-api-key" name="oanda_api_key" value="{{ current_user.oanda_api_key or '' }}">
+                                <div class="form-text">Enter your OANDA API key</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="oanda-account-id" class="form-label">OANDA Account ID</label>
+                                <input type="text" class="form-control" id="oanda-account-id" name="oanda_account_id" value="{{ current_user.oanda_account_id or '' }}">
+                                <div class="form-text">Enter your OANDA account ID</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save OANDA API Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Settings -->
+            <div class="tab-pane fade" id="notification-settings" role="tabpanel" aria-labelledby="notification-settings-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Notification Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('update_notification_settings') }}">
+                            <div class="mb-4">
+                                <h6>Email Notifications</h6>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enable-email-notifications" name="enable_email_notifications" {{ 'checked' if current_user.enable_email_notifications else '' }}>
+                                    <label class="form-check-label" for="enable-email-notifications">Enable Email Notifications</label>
+                                </div>
+                                <div class="mt-2">
+                                    <label for="email-address" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email-address" value="{{ current_user.email }}" readonly>
+                                    <div class="form-text">To change your email, update it in your profile</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h6>Telegram Notifications</h6>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enable-telegram-notifications" name="enable_telegram_notifications" {{ 'checked' if current_user.enable_telegram_notifications else '' }}>
+                                    <label class="form-check-label" for="enable-telegram-notifications">Enable Telegram Notifications</label>
+                                </div>
+                                <div class="mt-2">
+                                    <label for="telegram-chat-id" class="form-label">Telegram Chat ID</label>
+                                    <input type="text" class="form-control" id="telegram-chat-id" name="telegram_chat_id" value="{{ current_user.telegram_chat_id or '' }}">
+                                    <div class="form-text">Enter your Telegram chat ID to receive notifications</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h6>Discord Notifications</h6>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enable-discord-notifications" name="enable_discord_notifications" {{ 'checked' if current_user.enable_discord_notifications else '' }}>
+                                    <label class="form-check-label" for="enable-discord-notifications">Enable Discord Notifications</label>
+                                </div>
+                                <div class="mt-2">
+                                    <label for="discord-webhook-url" class="form-label">Discord Webhook URL</label>
+                                    <input type="text" class="form-control" id="discord-webhook-url" name="discord_webhook_url" value="{{ current_user.discord_webhook_url or '' }}">
+                                    <div class="form-text">Enter Discord webhook URL to receive notifications</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6>Notification Types</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="notify-signals" name="notify_signals" checked>
+                                    <label class="form-check-label" for="notify-signals">Trading Signals</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="notify-trades" name="notify_trades" checked>
+                                    <label class="form-check-label" for="notify-trades">Trade Executions</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="notify-errors" name="notify_errors" checked>
+                                    <label class="form-check-label" for="notify-errors">Error Alerts</label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Notification Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Management -->
+            <div class="tab-pane fade" id="risk-management" role="tabpanel" aria-labelledby="risk-management-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Risk Management Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('update_risk_settings') }}">
+                            <div class="mb-3">
+                                <label for="max-position-size" class="form-label">Maximum Position Size (% of account)</label>
+                                <input type="number" class="form-control" id="max-position-size" name="max_position_size_pct" value="{{ current_user.max_position_size_pct }}" min="0.1" max="100" step="0.1">
+                                <div class="form-text">Maximum size of a single position as a percentage of your account balance</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="max-open-positions" class="form-label">Maximum Open Positions</label>
+                                <input type="number" class="form-control" id="max-open-positions" name="max_open_positions" value="{{ current_user.max_open_positions }}" min="1" max="100" step="1">
+                                <div class="form-text">Maximum number of positions that can be open simultaneously</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="default-stop-loss" class="form-label">Default Stop Loss (%)</label>
+                                <input type="number" class="form-control" id="default-stop-loss" name="default_stop_loss_pct" value="{{ current_user.default_stop_loss_pct }}" min="0.1" max="50" step="0.1">
+                                <div class="form-text">Default stop loss percentage if not specified in a strategy</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="default-take-profit" class="form-label">Default Take Profit (%)</label>
+                                <input type="number" class="form-control" id="default-take-profit" name="default_take_profit_pct" value="{{ current_user.default_take_profit_pct }}" min="0.1" max="100" step="0.1">
+                                <div class="form-text">Default take profit percentage if not specified in a strategy</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Risk Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appearance -->
+            <div class="tab-pane fade" id="appearance" role="tabpanel" aria-labelledby="appearance-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Appearance Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('update_appearance_settings') }}">
+                            <div class="mb-3">
+                                <label class="form-label">Theme</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="theme" id="theme-dark" value="dark" checked>
+                                        <label class="form-check-label" for="theme-dark">
+                                            Dark
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="theme" id="theme-light" value="light">
+                                        <label class="form-check-label" for="theme-light">
+                                            Light
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Chart Type</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="chart_type" id="chart-candlestick" value="candlestick" checked>
+                                        <label class="form-check-label" for="chart-candlestick">
+                                            Candlestick
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="chart_type" id="chart-line" value="line">
+                                        <label class="form-check-label" for="chart-line">
+                                            Line
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="chart_type" id="chart-ohlc" value="ohlc">
+                                        <label class="form-check-label" for="chart-ohlc">
+                                            OHLC
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="default-timeframe" class="form-label">Default Timeframe</label>
+                                <select class="form-select" id="default-timeframe" name="default_timeframe">
+                                    <option value="1m">1 minute</option>
+                                    <option value="5m">5 minutes</option>
+                                    <option value="15m">15 minutes</option>
+                                    <option value="30m">30 minutes</option>
+                                    <option value="1h" selected>1 hour</option>
+                                    <option value="4h">4 hours</option>
+                                    <option value="1d">1 day</option>
+                                    <option value="1w">1 week</option>
+                                </select>
+                                <div class="form-text">Default timeframe for charts and market data</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Appearance Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Strategy Defaults -->
+            <div class="tab-pane fade" id="strategy-defaults" role="tabpanel" aria-labelledby="strategy-defaults-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Strategy Default Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('update_strategy_defaults') }}">
+                            <div class="mb-3">
+                                <label for="default-risk-per-trade" class="form-label">Default Risk Per Trade (%)</label>
+                                <input type="number" class="form-control" id="default-risk-per-trade" name="default_risk_per_trade" value="1.0" min="0.1" max="10" step="0.1">
+                                <div class="form-text">Default percentage of account to risk per trade</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="default-trading-pairs" class="form-label">Default Trading Pairs</label>
+                                <select class="form-select" id="default-trading-pairs" name="default_trading_pairs" multiple size="8">
+                                    <optgroup label="Crypto">
+                                        <option value="BTC/USDT" selected>BTC/USDT</option>
+                                        <option value="ETH/USDT" selected>ETH/USDT</option>
+                                        <option value="SOL/USDT">SOL/USDT</option>
+                                        <option value="BNB/USDT">BNB/USDT</option>
+                                        <option value="ADA/USDT">ADA/USDT</option>
+                                    </optgroup>
+                                    <optgroup label="Forex">
+                                        <option value="EUR/USD" selected>EUR/USD</option>
+                                        <option value="GBP/USD" selected>GBP/USD</option>
+                                        <option value="USD/JPY">USD/JPY</option>
+                                        <option value="AUD/USD">AUD/USD</option>
+                                        <option value="USD/CAD">USD/CAD</option>
+                                    </optgroup>
+                                </select>
+                                <div class="form-text">Hold Ctrl/Cmd to select multiple pairs</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="default-indicators" class="form-label">Default Technical Indicators</label>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="indicator-rsi" name="default_indicators" value="rsi" checked>
+                                                    <label class="form-check-label" for="indicator-rsi">RSI</label>
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="indicator-macd" name="default_indicators" value="macd" checked>
+                                                    <label class="form-check-label" for="indicator-macd">MACD</label>
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="indicator-bb" name="default_indicators" value="bollinger_bands">
+                                                    <label class="form-check-label" for="indicator-bb">Bollinger Bands</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="indicator-ema" name="default_indicators" value="ema" checked>
+                                                    <label class="form-check-label" for="indicator-ema">EMA</label>
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="indicator-sma" name="default_indicators" value="sma">
+                                                    <label class="form-check-label" for="indicator-sma">SMA</label>
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="indicator-stoch" name="default_indicators" value="stochastic">
+                                                    <label class="form-check-label" for="indicator-stoch">Stochastic</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="indicator-adx" name="default_indicators" value="adx">
+                                                    <label class="form-check-label" for="indicator-adx">ADX</label>
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="indicator-atr" name="default_indicators" value="atr">
+                                                    <label class="form-check-label" for="indicator-atr">ATR</label>
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="indicator-obv" name="default_indicators" value="obv">
+                                                    <label class="form-check-label" for="indicator-obv">OBV</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Strategy Defaults
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

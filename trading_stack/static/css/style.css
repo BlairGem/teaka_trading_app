@@ -1,0 +1,180 @@
+/* Custom styles for the Trading Platform */
+
+/* General */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+footer {
+    margin-top: auto;
+}
+
+.card {
+    border-color: var(--bs-secondary);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    border-bottom-color: var(--bs-secondary);
+}
+
+/* Dashboard styles */
+.price-up {
+    animation: price-up-animation 1s ease;
+}
+
+.price-down {
+    animation: price-down-animation 1s ease;
+}
+
+@keyframes price-up-animation {
+    0% { color: var(--bs-success); }
+    100% { color: inherit; }
+}
+
+@keyframes price-down-animation {
+    0% { color: var(--bs-danger); }
+    100% { color: inherit; }
+}
+
+.position-profit {
+    border-left: 4px solid var(--bs-success);
+}
+
+.position-loss {
+    border-left: 4px solid var(--bs-danger);
+}
+
+.ticker-up .ticker-price {
+    color: var(--bs-success);
+}
+
+.ticker-down .ticker-price {
+    color: var(--bs-danger);
+}
+
+.signal-buy {
+    background-color: rgba(25, 135, 84, 0.1);
+}
+
+.signal-sell {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Chart containers */
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 400px;
+}
+
+.indicator-chart-container {
+    position: relative;
+    width: 100%;
+    height: 150px;
+}
+
+/* Strategy editor */
+.strategy-card {
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.strategy-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.condition-badge {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+    border-radius: 0.25rem;
+}
+
+.indicator-settings {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+    background-color: var(--bs-dark);
+}
+
+/* Backtesting */
+.backtest-summary-box {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+    text-align: center;
+}
+
+.trade-win {
+    color: var(--bs-success);
+}
+
+.trade-loss {
+    color: var(--bs-danger);
+}
+
+/* Signals page */
+.signal-item {
+    transition: all 0.3s ease;
+}
+
+.signal-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Modal styling */
+.modal-content {
+    border-color: var(--bs-secondary);
+}
+
+.modal-header, .modal-footer {
+    border-color: var(--bs-secondary);
+}
+
+/* Custom toasts */
+.toast-container {
+    z-index: 1080;
+}
+
+.toast {
+    background-color: var(--bs-dark);
+}
+
+/* Loading spinner overlay */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner-message {
+    text-align: center;
+    color: white;
+    margin-top: 1rem;
+}
+
+/* Small screens adjustments */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .chart-container {
+        height: 300px;
+    }
+    
+    .indicator-chart-container {
+        height: 120px;
+    }
+}

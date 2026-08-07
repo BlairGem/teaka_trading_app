@@ -1,0 +1,383 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Trading Platform{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h1 class="mb-0">Dashboard</h1>
+        <p class="text-muted">Overview of your trading activity and market conditions</p>
+    </div>
+    <div class="col-auto">
+        <button type="button" class="btn btn-outline-primary" id="refresh-dashboard-btn">
+            <i class="fas fa-sync-alt me-2"></i>Refresh Data
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Account Balance Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-wallet me-2"></i>Account Balance</h5>
+            </div>
+            <div class="card-body" id="account-balance-container">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading account balance...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Latest Prices Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Latest Prices</h5>
+                <a href="{{ url_for('market_data') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-external-link-alt me-1"></i>Details
+                </a>
+            </div>
+            <div class="card-body" id="latest-prices-container">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading latest prices...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Active Positions Section -->
+    <div class="col-md-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Active Positions</h5>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#manualTradeModal">
+                        <i class="fas fa-plus me-1"></i>New Trade
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" id="active-positions-container">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading active positions...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Signals Section -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Recent Signals</h5>
+                <a href="{{ url_for('signals') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-external-link-alt me-1"></i>All Signals
+                </a>
+            </div>
+            <div class="card-body" id="recent-signals-container">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading recent signals...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Trades Section -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Trades</h5>
+            </div>
+            <div class="card-body" id="recent-trades-container">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading recent trades...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manual Trade Modal -->
+<div class="modal fade" id="manualTradeModal" tabindex="-1" aria-labelledby="manualTradeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="manualTradeModalLabel">New Manual Trade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="manual-trade-form">
+                    <div class="mb-3">
+                        <label for="trading-platform" class="form-label">Platform</label>
+                        <select class="form-select" id="trading-platform" name="platform" required>
+                            <option value="binance">Binance</option>
+                            <option value="oanda">OANDA</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="trading-pair" class="form-label">Trading Pair</label>
+                        <select class="form-select" id="trading-pair" name="trading_pair" required>
+                            <option value="" disabled selected>Select a platform first</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="order-type" class="form-label">Order Type</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="order_type" id="order-buy" value="BUY" checked>
+                                    <label class="form-check-label" for="order-buy">
+                                        <span class="badge bg-success">BUY</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="order_type" id="order-sell" value="SELL">
+                                    <label class="form-check-label" for="order-sell">
+                                        <span class="badge bg-danger">SELL</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="trade-amount" class="form-label">Amount</label>
+                        <input type="number" class="form-control" id="trade-amount" name="amount" step="0.01" min="0.01" required>
+                        <div class="form-text">Enter the amount to trade</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="price" class="form-label">Price (Optional)</label>
+                        <input type="number" class="form-control" id="price" name="price" step="0.0001">
+                        <div class="form-text">Leave empty for market orders</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stop-loss" class="form-label">Stop Loss (%)</label>
+                                <input type="number" class="form-control" id="stop-loss" name="stop_loss" step="0.1" min="0.1">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="take-profit" class="form-label">Take Profit (%)</label>
+                                <input type="number" class="form-control" id="take-profit" name="take_profit" step="0.1" min="0.1">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submit-trade-btn">
+                    <i class="fas fa-paper-plane me-2"></i>Submit Trade
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    // Initialize dashboard data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Refresh button event
+        document.getElementById('refresh-dashboard-btn').addEventListener('click', function() {
+            fetchAccountBalance();
+            fetchLatestPrices();
+            fetchActivePositions();
+            fetchRecentTrades();
+            fetchRecentSignals();
+        });
+        
+        // Submit trade button event
+        document.getElementById('submit-trade-btn').addEventListener('click', function() {
+            submitManualTrade();
+        });
+        
+        // When trading platform changes, update trading pairs
+        document.getElementById('trading-platform').addEventListener('change', function() {
+            updateTradingPairsForPlatform(this.value);
+        });
+        
+        // Initialize trading pairs for the default platform
+        updateTradingPairsForPlatform(document.getElementById('trading-platform').value);
+    });
+    
+    // Update trading pairs based on selected platform
+    function updateTradingPairsForPlatform(platform) {
+        const pairSelect = document.getElementById('trading-pair');
+        pairSelect.innerHTML = '';
+        
+        let pairs = [];
+        
+        if (platform === 'binance') {
+            pairs = [
+                'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'ADA/USDT',
+                'XRP/USDT', 'DOT/USDT', 'DOGE/USDT', 'AVAX/USDT', 'MATIC/USDT'
+            ];
+        } else if (platform === 'oanda') {
+            pairs = [
+                'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD',
+                'USD/CHF', 'NZD/USD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'
+            ];
+        }
+        
+        pairs.forEach(pair => {
+            const option = document.createElement('option');
+            option.value = pair;
+            option.textContent = pair;
+            pairSelect.appendChild(option);
+        });
+    }
+    
+    // Function to submit a manual trade
+    function submitManualTrade() {
+        const form = document.getElementById('manual-trade-form');
+        
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        const submitBtn = document.getElementById('submit-trade-btn');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+        submitBtn.disabled = true;
+        
+        const formData = new FormData(form);
+        const tradeData = {};
+        
+        for (const [key, value] of formData.entries()) {
+            tradeData[key] = value;
+        }
+        
+        fetch('/api/trade/manual', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(tradeData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                showSuccessMessage('Trade executed successfully');
+                
+                // Close modal
+                const modalElement = document.getElementById('manualTradeModal');
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                modal.hide();
+                
+                // Refresh positions and trades
+                fetchActivePositions();
+                fetchRecentTrades();
+            } else {
+                // Show error message
+                showErrorMessage(data.error || 'Failed to execute trade');
+            }
+        })
+        .catch(error => {
+            console.error('Error executing trade:', error);
+            showErrorMessage('Failed to execute trade. Please try again.');
+        })
+        .finally(() => {
+            // Reset button state
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+        });
+    }
+    
+    // Function to show success message
+    function showSuccessMessage(message) {
+        // Using Bootstrap's toast component
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1080';
+        
+        const toastHtml = `
+            <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-success text-white">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong class="me-auto">Success</strong>
+                    <small>Just now</small>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            </div>
+        `;
+        
+        toastContainer.innerHTML = toastHtml;
+        document.body.appendChild(toastContainer);
+        
+        const toastElement = toastContainer.querySelector('.toast');
+        const toast = new bootstrap.Toast(toastElement, {
+            delay: 5000
+        });
+        
+        toast.show();
+        
+        // Remove from DOM after hidden
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastContainer.remove();
+        });
+    }
+    
+    // Function to show error message
+    function showErrorMessage(message) {
+        // Using Bootstrap's toast component
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1080';
+        
+        const toastHtml = `
+            <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-danger text-white">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong class="me-auto">Error</strong>
+                    <small>Just now</small>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            </div>
+        `;
+        
+        toastContainer.innerHTML = toastHtml;
+        document.body.appendChild(toastContainer);
+        
+        const toastElement = toastContainer.querySelector('.toast');
+        const toast = new bootstrap.Toast(toastElement, {
+            delay: 5000
+        });
+        
+        toast.show();
+        
+        // Remove from DOM after hidden
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastContainer.remove();
+        });
+    }
+</script>
+{% endblock %}
