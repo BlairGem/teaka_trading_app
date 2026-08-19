@@ -16,6 +16,7 @@ import json
 import os
 import subprocess
 import sys
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -320,6 +321,85 @@ def ev_remote_command():
             "route": request.path,
         }
     )
+
+
+SCAN_URLS = [
+    "https://teaka.trading",
+    "https://api.openai.com/v1/chat/completions",
+    "https://openrouter.ai/api/v1/chat/completions",
+    "https://api.qwen.ai/v1/generate",
+    "https://github.com/BlairGem/Ev",
+    "https://github.com/BlairGem/GPT_AI_Workspace",
+    "https://example.com",
+]
+
+
+def _probe_url(url: str, timeout: float = 5) -> dict:
+    """Check if a URL is reachable. Returns status dict."""
+    import urllib.request
+    import urllib.error
+
+    try:
+        parsed = urllib.parse.urlparse(url)
+        domain = parsed.hostname or ""
+    except Exception:
+        return {"url": url, "domain": None, "dns": "Invalid URL", "reachable": False}
+
+    is_local = any(domain.startswith(p) for p in ("127.", "192.168.", "10.", "172.")) or domain == "localhost"
+
+    result: dict = {
+        "url": url,
+        "domain": domain,
+        "dns": "Local LAN / localhost" if is_local else "unknown",
+        "reachable": False,
+    }
+
+    if is_local:
+        return result
+
+    try:
+        req = urllib.request.Request(url, method="HEAD")
+        urllib.request.urlopen(req, timeout=timeout)
+        result["dns"] = "Public domain (resolves)"
+        result["reachable"] = True
+    except urllib.error.HTTPError:
+        result["dns"] = "Public domain (resolves)"
+        result["reachable"] = True
+    except Exception:
+        result["dns"] = "No response"
+        result["reachable"] = False
+
+    return result
+
+
+@app.get("/api/scan/domains")
+@app.post("/api/scan/domains")
+def scan_domains():
+    """Scan TeAka-related URLs for reachability.
+
+    curl http://127.0.0.1:5050/api/scan/domains
+    curl -X POST http://127.0.0.1:5050/api/scan/domains -H 'Content-Type: application/json' -d '{"urls":["https://teaka.trading"]}'
+    """
+    data = request.get_json(silent=True) or {}
+    urls = data.get("urls") or SCAN_URLS
+    results = [_probe_url(u) for u in urls]
+    return jsonify({
+        "ok": True,
+        "scanned_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(results),
+        "results": results,
+    })
+
+
+@app.post("/api/scan/domains/report")
+def scan_domains_report():
+    """Receive a scan report from Scriptable or another client."""
+    data = request.get_json(silent=True) or {}
+    results = data.get("results", [])
+    report_path = BRAIN_DIR / "domain_scan_report.json"
+    BRAIN_DIR.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return jsonify({"ok": True, "saved": str(report_path), "count": len(results)})
 
 
 def main() -> None:
