@@ -28,6 +28,12 @@ node_modules/
 build/
 dist/
 
+# Windows venv binaries (should not be in repo)
+*.exe
+
+# Compressed archives
+*.zip
+
 # Editors and OS
 .vscode/
 .idea/

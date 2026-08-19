@@ -1,7 +1,10 @@
 import Decimal from 'decimal.js';
-import * as tf from '@tensorflow/tfjs';
-import { Matrix } from 'ml-matrix';
-import { Position } from '../stores/portfolioStore';
+
+interface Position {
+  current_price: Decimal;
+  entry_price: Decimal;
+  quantity: Decimal;
+}
 
 interface RiskMetrics {
   var: Decimal;  // Value at Risk
@@ -34,7 +37,6 @@ export class RiskManagementService {
   private positions: Map<string, Position> = new Map();
   private priceHistory: Map<string, Decimal[]> = new Map();
   private volatilityHistory: Map<string, Decimal[]> = new Map();
-  private correlationMatrix: Matrix | null = null;
   private riskLimits: RiskLimits;
   private confidenceLevel = 0.95;  // 95% VaR
   private riskFreeRate = new Decimal(0.02);  // 2% annual risk-free rate
@@ -184,14 +186,14 @@ export class RiskManagementService {
   }
 
   private calculateVaR(returns: number[], portfolioValue: Decimal): Decimal {
-    const sortedReturns = returns.sort((a, b) => a - b);
-    const varIndex = Math.floor(returns.length * (1 - this.confidenceLevel));
+    const sortedReturns = [...returns].sort((a, b) => a - b);
+    const varIndex = Math.floor(sortedReturns.length * (1 - this.confidenceLevel));
     const varReturn = sortedReturns[varIndex];
     return portfolioValue.times(new Decimal(varReturn));
   }
 
   private calculateCVaR(returns: number[], portfolioValue: Decimal): Decimal {
-    const sortedReturns = returns.sort((a, b) => a - b);
+    const sortedReturns = [...returns].sort((a, b) => a - b);
     const varIndex = Math.floor(returns.length * (1 - this.confidenceLevel));
     const tailReturns = sortedReturns.slice(0, varIndex);
     const cvarReturn = tailReturns.reduce((a, b) => a + b, 0) / tailReturns.length;
