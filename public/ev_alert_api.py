@@ -1,13 +1,16 @@
-# File: ev_alert_api.py
+import os
 from flask import Flask, request, jsonify
 import requests
 
 app = Flask(__name__)
 
-TELEGRAM_BOT_TOKEN = "AAFAf-5JT1yKg7c6gsk6p3UWYqiy249BPUc"
-TELEGRAM_CHAT_ID = "123456789"  # Replace with real one
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 def send_telegram_alert(message):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("[ALERT] Telegram not configured — set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID")
+        return {"ok": False, "error": "Telegram credentials not configured"}
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
     response = requests.post(url, json=data)
@@ -18,15 +21,15 @@ def receive_alert():
     data = request.get_json()
     message = data.get("message", "No message received.")
     print(f"[ALERT RECEIVED] {message}")
-    send_telegram_alert(message)
-    return jsonify({"status": "sent", "message": message})
+    result = send_telegram_alert(message)
+    return jsonify({"status": "sent", "message": message, "telegram": result})
 
 @app.route("/api/auto-exit", methods=["POST"])
 def auto_exit_trigger():
     trade = request.get_json()
     asset = trade.get("asset", "Unknown")
     reason = trade.get("reason", "N/A")
-    send_telegram_alert(f"⚠️ Auto-exit triggered for {asset}: {reason}")
+    send_telegram_alert(f"Auto-exit triggered for {asset}: {reason}")
     return jsonify({"status": "auto-exit sent", "asset": asset})
 
 if __name__ == "__main__":

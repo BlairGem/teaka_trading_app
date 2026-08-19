@@ -1,4 +1,21 @@
 TELEGRAM
 
-TOKEN: 7711152546:AAFAf-5JT1yKg7c6gsk6p3UWYqiy249BPUc
+TOKEN: (set via TELEGRAM_BOT_TOKEN environment variable — never store in Git)
 ID: @teaka_trader_bot
+
+SETUP:
+1. Open Telegram, search for @BotFather
+2. Send /newbot → name it "TeAka Trader Bot" → username @teaka_trader_bot
+3. Copy the token BotFather gives you
+4. Set environment variable: export TELEGRAM_BOT_TOKEN=<your-token>
+5. Get your chat ID: curl https://api.telegram.org/bot<token>/getUpdates
+6. Set environment variable: export TELEGRAM_CHAT_ID=<your-chat-id>
+
+CURL EXAMPLES:
+  # Send an alert via the TeAka bridge
+  curl -X POST http://127.0.0.1:5050/api/alert/send \
+    -H 'Content-Type: application/json' \
+    -d '{"message":"Test alert from TeAka"}'
+
+  # Check bot status directly
+  curl https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getMe
