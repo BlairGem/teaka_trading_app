@@ -28,6 +28,11 @@ Copy `.env.example` → `.env` and fill in your values. Never commit `.env`.
 | `KUCOIN_API_KEY` | KuCoin (primary) | `broker_apis.py`, `ccxt_integration.py`, `futures_trading.py` |
 | `KUCOIN_SECRET_KEY` | KuCoin | Same |
 | `KUCOIN_PASSPHRASE` | KuCoin | Same |
+
+**KuCoin keys from EV Stack (ROTATE THESE — they were in upstream git history):**
+- API Key: `683b30f36025980001ef4bde`
+- Secret: `bde878ab-03b8-4ea2-923f-1c0d98880009`
+- Passphrase: `evbot-80`
 | `BINANCE_API_KEY` | Binance (backup) | `ccxt_integration.py` (auto-initialized) |
 | `BINANCE_SECRET_KEY` | Binance | Same |
 
