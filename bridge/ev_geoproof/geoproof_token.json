@@ -1,0 +1,35 @@
+{
+  "project_name": "EV GeoProof Chain",
+  "token_name": "GeoProof",
+  "ticker": "GPROOF",
+  "grid_standard": "NZTM2000_50M_CELL",
+  "proof_model": "hash-linked geospatial evidence grid",
+  "core_layers": [
+    "UAV magnetics",
+    "LiDAR DEM/DSM",
+    "geological mapping",
+    "field samples",
+    "assays",
+    "permit boundaries",
+    "groundwater bores"
+  ],
+  "bore_cells": [
+    {
+      "cell_id": "NZ_Bore_001",
+      "coordinates": {"lat": -42.45, "lon": 171.23},
+      "bore_depth_m": 35,
+      "screen_depth_m": 5,
+      "pump_capacity_lps": 33.33,
+      "daily_volume_m3": 1200,
+      "weekly_volume_m3": 7200,
+      "annual_volume_m3": 312000,
+      "water_use_type": "mining/irrigation",
+      "top_screen_m": 2.5
+    }
+  ],
+  "federation_note": "GeoProof is an EV GeoBlockchain token. It integrates with TeAka only through adapters — trading stays in TeAka, geospatial proof stays in EV Stack.",
+  "related_repos": [
+    "BlairGem/Ev",
+    "evstack/ev-node"
+  ]
+}

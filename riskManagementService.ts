@@ -1,7 +1,10 @@
 import Decimal from 'decimal.js';
-import * as tf from '@tensorflow/tfjs';
-import { Matrix } from 'ml-matrix';
-import { Position } from '../stores/portfolioStore';
+
+interface Position {
+  current_price: Decimal;
+  entry_price: Decimal;
+  quantity: Decimal;
+}
 
 interface RiskMetrics {
   var: Decimal;  // Value at Risk
@@ -34,7 +37,6 @@ export class RiskManagementService {
   private positions: Map<string, Position> = new Map();
   private priceHistory: Map<string, Decimal[]> = new Map();
   private volatilityHistory: Map<string, Decimal[]> = new Map();
-  private correlationMatrix: Matrix | null = null;
   private riskLimits: RiskLimits;
   private confidenceLevel = 0.95;  // 95% VaR
   private riskFreeRate = new Decimal(0.02);  // 2% annual risk-free rate
@@ -184,14 +186,14 @@ export class RiskManagementService {
   }
 
   private calculateVaR(returns: number[], portfolioValue: Decimal): Decimal {
-    const sortedReturns = returns.sort((a, b) => a - b);
-    const varIndex = Math.floor(returns.length * (1 - this.confidenceLevel));
+    const sortedReturns = [...returns].sort((a, b) => a - b);
+    const varIndex = Math.floor(sortedReturns.length * (1 - this.confidenceLevel));
     const varReturn = sortedReturns[varIndex];
     return portfolioValue.times(new Decimal(varReturn));
   }
 
   private calculateCVaR(returns: number[], portfolioValue: Decimal): Decimal {
-    const sortedReturns = returns.sort((a, b) => a - b);
+    const sortedReturns = [...returns].sort((a, b) => a - b);
     const varIndex = Math.floor(returns.length * (1 - this.confidenceLevel));
     const tailReturns = sortedReturns.slice(0, varIndex);
     const cvarReturn = tailReturns.reduce((a, b) => a + b, 0) / tailReturns.length;
@@ -378,8 +380,10 @@ export class RiskManagementService {
   }
 
   private async fetchMarketReturns(): Promise<number[]> {
-    // In a real implementation, this would fetch S&P 500 data
-    // For now, return synthetic data
+    // TODO: Replace with real S&P 500 data feed (e.g. Alpaca or Yahoo Finance API).
+    // TODO: For crypto tail risk, use Lévy stable distributions (scipy.stats.levy_stable)
+    // instead of normal/random — crypto returns are heavy-tailed and standard VaR
+    // underestimates extreme moves. See: Nolan 1997, McCulloch 1986.
     return Array(this.historicalWindow).fill(0).map(() => 
       (Math.random() - 0.5) * 0.02
     );

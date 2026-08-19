@@ -186,6 +186,72 @@ C:\Users\GEMBotSys\...             ← GEMBotSys Python / venv provenance
 
 ---
 
+## curl Quick Reference
+
+All endpoints are on the paper-safe bridge at `http://127.0.0.1:5050`.
+
+```bash
+# --- Status ---
+curl http://127.0.0.1:5050/api/phone/status
+curl http://127.0.0.1:5050/api/evbot/status
+
+# --- Paper trading ---
+curl -X POST http://127.0.0.1:5050/api/phone/paper-run
+
+# --- EVBot ---
+curl -X POST http://127.0.0.1:5050/api/evbot/start \
+  -H 'Content-Type: application/json' \
+  -d '{"source":"curl"}'
+
+# --- Commands ---
+curl -X POST http://127.0.0.1:5050/api/phone/command \
+  -H 'Content-Type: application/json' \
+  -d '{"command":"ping"}'
+
+# --- Domain scanner ---
+curl http://127.0.0.1:5050/api/scan/domains
+curl -X POST http://127.0.0.1:5050/api/scan/domains \
+  -H 'Content-Type: application/json' \
+  -d '{"urls":["https://teaka.trading","https://example.com"]}'
+
+# --- Brain sync ---
+curl http://127.0.0.1:5050/api/phone/brain
+
+# --- Telegram alerts (requires TELEGRAM_BOT_TOKEN set) ---
+curl -X POST http://127.0.0.1:5050/api/alert/send \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Test alert from TeAka"}'
+```
+
+---
+
+## Telegram Bot Setup (@teaka_trader_bot)
+
+1. Open Telegram → search **@BotFather** → send `/newbot`
+2. Name: `TeAka Trader Bot` → username: `@teaka_trader_bot`
+3. Copy the token BotFather gives you
+4. Get your chat ID:
+   ```bash
+   # Send a message to your bot first, then:
+   curl https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
+   # Look for "chat":{"id": <number>} in the response
+   ```
+5. Set in your `.env`:
+   ```text
+   TELEGRAM_BOT_TOKEN=<your-token>
+   TELEGRAM_CHAT_ID=<your-chat-id>
+   ```
+6. Test:
+   ```bash
+   curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+     -H 'Content-Type: application/json' \
+     -d "{\"chat_id\":\"$TELEGRAM_CHAT_ID\",\"text\":\"TeAka bot is live\"}"
+   ```
+
+All alert files (`alert_routes.py.py`, `public/ev_alert_api.py`, `trading_stack/messaging.py`) read credentials from environment variables only.
+
+---
+
 ## Environment
 
 Copy `.env.example` → `.env` (never commit real values):

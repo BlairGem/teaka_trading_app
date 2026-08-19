@@ -1,10 +1,10 @@
-
 import os
 import subprocess
 import socket
+import threading
 from flask import Flask, request, jsonify
 
-# Helper: Find an available port starting from 8081
+
 def find_open_port(start=8081, max_tries=20):
     for port in range(start, start + max_tries):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -12,7 +12,7 @@ def find_open_port(start=8081, max_tries=20):
                 return port
     return None
 
-# Setup EVBot Flask Server on open port
+
 def start_evbot_flask(port):
     app = Flask(__name__)
 
@@ -21,35 +21,39 @@ def start_evbot_flask(port):
         data = request.get_json()
         spell = data.get("spell", "")
         if spell == "say_hi":
-            return jsonify({"message": "🔮 EVBot online via auto-bind on port " + str(port)})
+            return jsonify({"message": f"EVBot online via auto-bind on port {port}"})
         return jsonify({"result": "Unknown spell"})
 
     app.run(host="127.0.0.1", port=port)
 
-# Try to find open port for Flask
-ev_port = find_open_port()
 
-if ev_port:
-    print(f"✅ Binding EVBot to port {ev_port}")
-    import threading
-    flask_thread = threading.Thread(target=start_evbot_flask, args=(ev_port,))
-    flask_thread.daemon = True
-    flask_thread.start()
-else:
-    print("❌ No open port found for EVBot Flask")
-
-# Try to start Ollama on new port if needed
-ollama_ports = [5050, 5000]
-ollama_started = False
-
-for port in ollama_ports:
+def start_ollama_serve(port=11434):
+    """Start ollama serve (not 'ollama run' which is interactive)."""
     try:
-        subprocess.run(["ollama", "run", "--host", f"0.0.0.0:{port}"], check=True)
-        print(f"✅ Ollama started on port {port}")
-        ollama_started = True
-        break
-    except Exception as e:
-        print(f"⚠️ Ollama failed to start on port {port}: {str(e)}")
+        proc = subprocess.Popen(
+            ["ollama", "serve"],
+            env={**os.environ, "OLLAMA_HOST": f"0.0.0.0:{port}"},
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        print(f"Ollama serve started (pid {proc.pid}) on port {port}")
+        return proc
+    except FileNotFoundError:
+        print("ollama binary not found — skipping")
+        return None
 
-if not ollama_started:
-    print("❌ Ollama could not be started on any designated ports")
+
+def main():
+    ev_port = find_open_port()
+    if ev_port:
+        print(f"Binding EVBot to port {ev_port}")
+        flask_thread = threading.Thread(target=start_evbot_flask, args=(ev_port,), daemon=True)
+        flask_thread.start()
+    else:
+        print("No open port found for EVBot Flask")
+
+    start_ollama_serve()
+
+
+if __name__ == "__main__":
+    main()

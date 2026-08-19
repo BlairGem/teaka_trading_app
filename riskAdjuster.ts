@@ -1,5 +1,9 @@
 import { Decimal } from 'decimal.js';
-import { logger } from '../utils/logger';
+
+const logger = {
+  info: (msg: string, data?: unknown) => console.log(`[RiskAdjuster] ${msg}`, data ?? ''),
+  error: (msg: string, err?: unknown) => console.error(`[RiskAdjuster] ${msg}`, err ?? ''),
+};
 
 interface RiskAdjustment {
   stopLoss: Decimal;

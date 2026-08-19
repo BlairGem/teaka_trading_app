@@ -8,6 +8,9 @@ Config/*credentials*.json
 *.pem
 *.key
 
+# Credential vault (encrypted secrets + salt)
+bridge/vault/
+
 # Paper runtime state and logs
 paper_trading/state/
 *.jsonl
@@ -27,6 +30,12 @@ venv/
 node_modules/
 build/
 dist/
+
+# Windows venv binaries (should not be in repo)
+*.exe
+
+# Compressed archives
+*.zip
 
 # Editors and OS
 .vscode/
