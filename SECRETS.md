@@ -30,6 +30,9 @@ Copy `.env.example` → `.env` and fill in your values. Never commit `.env`.
 | `OANDA_ACCOUNT_ID` | OANDA forex | Same |
 | `IB_API_KEY` | Interactive Brokers | `trading_stack/broker_apis.py` |
 | `IB_ACCOUNT_ID` | Interactive Brokers | Same |
+| `ALPACA_API_KEY` | Alpaca (stocks: TSLA, AAPL, etc.) | `trading_stack/alpaca_integration.py`, `trading_stack/config.py` |
+| `ALPACA_SECRET_KEY` | Alpaca | Same |
+| `ALPACA_BASE_URL` | Alpaca (default: paper API) | Same |
 
 ---
 

@@ -30,6 +30,11 @@ OANDA_ACCOUNT_ID = os.environ.get("OANDA_ACCOUNT_ID", "")
 IB_API_KEY = os.environ.get("IB_API_KEY", "")
 IB_ACCOUNT_ID = os.environ.get("IB_ACCOUNT_ID", "")
 
+# Alpaca (stocks — TSLA, AAPL, etc.)
+ALPACA_API_KEY = os.environ.get("ALPACA_API_KEY", "")
+ALPACA_SECRET_KEY = os.environ.get("ALPACA_SECRET_KEY", "")
+ALPACA_BASE_URL = os.environ.get("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+
 # Telegram and Discord webhook configurations
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
@@ -56,6 +61,10 @@ CRYPTO_TRADING_PAIRS = [
 FOREX_TRADING_PAIRS = [
     "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD", 
     "USD/CHF", "NZD/USD", "EUR/GBP", "EUR/JPY", "GBP/JPY", "XAU/USD"
+]
+
+STOCK_TRADING_PAIRS = [
+    "AAPL", "GOOGL", "MSFT", "TSLA", "NVDA", "SPY", "QQQ"
 ]
 
 # Timeframes available for analysis
