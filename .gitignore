@@ -8,6 +8,9 @@ Config/*credentials*.json
 *.pem
 *.key
 
+# Credential vault (encrypted secrets + salt)
+bridge/vault/
+
 # Paper runtime state and logs
 paper_trading/state/
 *.jsonl

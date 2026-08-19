@@ -380,8 +380,10 @@ export class RiskManagementService {
   }
 
   private async fetchMarketReturns(): Promise<number[]> {
-    // In a real implementation, this would fetch S&P 500 data
-    // For now, return synthetic data
+    // TODO: Replace with real S&P 500 data feed (e.g. Alpaca or Yahoo Finance API).
+    // TODO: For crypto tail risk, use Lévy stable distributions (scipy.stats.levy_stable)
+    // instead of normal/random — crypto returns are heavy-tailed and standard VaR
+    // underestimates extreme moves. See: Nolan 1997, McCulloch 1986.
     return Array(this.historicalWindow).fill(0).map(() => 
       (Math.random() - 0.5) * 0.02
     );

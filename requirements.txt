@@ -1,5 +1,6 @@
 # Minimal deps for paper path + phone bridge
 flask>=3.0.0
+pynacl>=1.5.0
 
 # Optional: full BoltBuddy trading_stack bring-up (install only when needed)
 # See trading_stack/pyproject.toml for the complete dependency set.
