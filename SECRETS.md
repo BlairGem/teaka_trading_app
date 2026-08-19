@@ -21,16 +21,41 @@ Copy `.env.example` → `.env` and fill in your values. Never commit `.env`.
 
 ## Required for Live Trading (paper mode needs none of these)
 
+### Crypto Exchanges
+
 | Variable | Service | Used by |
 |----------|---------|---------|
-| `KUCOIN_API_KEY` | KuCoin exchange | `trading_stack/broker_apis.py` |
-| `KUCOIN_API_SECRET` | KuCoin exchange | Same |
-| `KUCOIN_API_PASSPHRASE` | KuCoin exchange | Same |
-| `OANDA_API_KEY` | OANDA forex | `trading_stack/broker_apis.py` |
+| `KUCOIN_API_KEY` | KuCoin (primary) | `broker_apis.py`, `ccxt_integration.py`, `futures_trading.py` |
+| `KUCOIN_SECRET_KEY` | KuCoin | Same |
+| `KUCOIN_PASSPHRASE` | KuCoin | Same |
+| `BINANCE_API_KEY` | Binance (backup) | `ccxt_integration.py` (auto-initialized) |
+| `BINANCE_SECRET_KEY` | Binance | Same |
+
+`ccxt_integration.py` supports 10 exchanges total. Optional ones (add env vars if needed):
+
+| Variable pattern | Exchange |
+|-----------------|----------|
+| `COINBASE_API_KEY` / `_SECRET_KEY` | Coinbase |
+| `KRAKEN_API_KEY` / `_SECRET_KEY` | Kraken |
+| `OKX_API_KEY` / `_SECRET_KEY` / `_PASSPHRASE` | OKX |
+| `BYBIT_API_KEY` / `_SECRET_KEY` | Bybit |
+
+Exchanges without credentials still work for **public data** (prices, OHLCV, order books).
+
+### Forex
+
+| Variable | Service | Used by |
+|----------|---------|---------|
+| `OANDA_API_KEY` | OANDA forex | `broker_apis.py` |
 | `OANDA_ACCOUNT_ID` | OANDA forex | Same |
-| `IB_API_KEY` | Interactive Brokers | `trading_stack/broker_apis.py` |
+
+### Stocks
+
+| Variable | Service | Used by |
+|----------|---------|---------|
+| `IB_API_KEY` | Interactive Brokers | `broker_apis.py` |
 | `IB_ACCOUNT_ID` | Interactive Brokers | Same |
-| `ALPACA_API_KEY` | Alpaca (stocks: TSLA, AAPL, etc.) | `trading_stack/alpaca_integration.py`, `trading_stack/config.py` |
+| `ALPACA_API_KEY` | Alpaca (TSLA, AAPL, etc.) | `alpaca_integration.py`, `config.py` |
 | `ALPACA_SECRET_KEY` | Alpaca | Same |
 | `ALPACA_BASE_URL` | Alpaca (default: paper API) | Same |
 

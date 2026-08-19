@@ -35,6 +35,21 @@ ALPACA_API_KEY = os.environ.get("ALPACA_API_KEY", "")
 ALPACA_SECRET_KEY = os.environ.get("ALPACA_SECRET_KEY", "")
 ALPACA_BASE_URL = os.environ.get("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
 
+# Binance (crypto — backup exchange)
+BINANCE_API_KEY = os.environ.get("BINANCE_API_KEY", "")
+BINANCE_SECRET_KEY = os.environ.get("BINANCE_SECRET_KEY", "")
+
+# Additional CCXT exchanges (optional — ccxt_integration.py supports all of these)
+COINBASE_API_KEY = os.environ.get("COINBASE_API_KEY", "")
+COINBASE_SECRET_KEY = os.environ.get("COINBASE_SECRET_KEY", "")
+KRAKEN_API_KEY = os.environ.get("KRAKEN_API_KEY", "")
+KRAKEN_SECRET_KEY = os.environ.get("KRAKEN_SECRET_KEY", "")
+OKX_API_KEY = os.environ.get("OKX_API_KEY", "")
+OKX_SECRET_KEY = os.environ.get("OKX_SECRET_KEY", "")
+OKX_PASSPHRASE = os.environ.get("OKX_PASSPHRASE", "")
+BYBIT_API_KEY = os.environ.get("BYBIT_API_KEY", "")
+BYBIT_SECRET_KEY = os.environ.get("BYBIT_SECRET_KEY", "")
+
 # Telegram and Discord webhook configurations
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")

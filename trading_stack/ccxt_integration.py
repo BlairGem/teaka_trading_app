@@ -1,8 +1,12 @@
-import ccxt
 import logging
 import os
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
+
+try:
+    import ccxt
+except ImportError:
+    ccxt = None
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +25,10 @@ class CCXTManager:
                           sandbox: bool = False) -> bool:
         """Initialize a CCXT exchange connection."""
         try:
+            if ccxt is None:
+                logger.warning("ccxt not installed — run: pip install ccxt")
+                return False
+
             if exchange_name not in self.supported_exchanges:
                 logger.error(f"Exchange {exchange_name} not supported")
                 return False
@@ -289,5 +297,8 @@ def initialize_exchanges():
     # Skip Coinbase for now as it often requires special setup
     logger.info("Exchange initialization completed")
 
-# Initialize exchanges on import
-initialize_exchanges()
+# Initialize exchanges on import (only if ccxt is available)
+if ccxt is not None:
+    initialize_exchanges()
+else:
+    logger.warning("ccxt not installed — crypto exchanges not initialized. Run: pip install ccxt")
