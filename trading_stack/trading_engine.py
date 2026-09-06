@@ -81,29 +81,38 @@ def _run_paper_candle(runtime, user_id, candle_time):
         if strategy.use_ml_model:
             pending.append((strategy, None, keys, 'ML unavailable in paper runtime'))
             continue
-        try:
-            completed = _CompletedCandles(provider, prior[-1])
-            signals = generate_signals_for_strategy(strategy, market_provider=completed,
-                pending_signal_lookup=lambda *_: None, signal_factory=TradingSignal,
-                now=prior[-1].to_pydatetime())
-            held_pairs = {lot['trading_pair'] for lot in runtime.positions(user_id) if lot['strategy_id'] == strategy.id}
-            exits = strategy.get_exit_conditions()
-            if held_pairs and exits:
-                class ExitRules:
+        # A later-starting pair must not discard another pair's ready signal.
+        # Evaluate only this candle's eligible pairs, and scope errors likewise.
+        for key in keys:
+            pair = key[2]
+            try:
+                class PairRules:
                     def __getattr__(self, name):
                         return getattr(strategy, name)
 
-                    def get_entry_conditions(self):
-                        return exit_conditions_with_default(exits)
+                    def get_trading_pairs(self):
+                        return [pair]
 
-                exit_signals = generate_signals_for_strategy(ExitRules(), market_provider=completed,
+                completed = _CompletedCandles(provider, prior[-1])
+                signals = generate_signals_for_strategy(PairRules(), market_provider=completed,
                     pending_signal_lookup=lambda *_: None, signal_factory=TradingSignal,
                     now=prior[-1].to_pydatetime())
-                exit_pairs = {s.trading_pair for s in exit_signals if s.signal_type == 'SELL' and s.trading_pair in held_pairs}
-                signals = [s for s in signals if s.trading_pair not in exit_pairs] + [s for s in exit_signals if s.trading_pair in exit_pairs and s.signal_type == 'SELL']
-            pending.append((strategy, signals, keys, None))
-        except (ModelUnavailableError, IndicatorUnavailableError, ValueError) as exc:
-            pending.append((strategy, None, keys, str(exc)))
+                held_pairs = {lot['trading_pair'] for lot in runtime.positions(user_id) if lot['strategy_id'] == strategy.id}
+                exits = strategy.get_exit_conditions()
+                if pair in held_pairs and exits:
+                    class ExitRules(PairRules):
+                        def get_entry_conditions(self):
+                            return exit_conditions_with_default(exits)
+
+                    exit_signals = generate_signals_for_strategy(ExitRules(), market_provider=completed,
+                        pending_signal_lookup=lambda *_: None, signal_factory=TradingSignal,
+                        now=prior[-1].to_pydatetime())
+                    sells = [s for s in exit_signals if s.signal_type == 'SELL']
+                    if sells:
+                        signals = sells
+                pending.append((strategy, signals, [key], None))
+            except (ModelUnavailableError, IndicatorUnavailableError, ValueError) as exc:
+                pending.append((strategy, None, [key], str(exc)))
     runtime._advance_clock(user_id, current)
     for strategy, signals, keys, error in pending:
         eligible = {key[2] for key in keys}

@@ -138,6 +138,12 @@ This installs socket/process/write/deletion and memory-only SQLite guards before
 application imports, includes the actual Flask test-client session, and preserves
 unique outputs under `paper_trading/state/test-artifacts/run-*`. Do not replace it
 with unguarded test discovery. Synthetic provenance is beside the fixture CSV.
+On this bundled Python 3.12 Windows runtime, numerical bootstrap temporarily
+suppresses only `platform._syscmd_ver` so intermittent WMI failure uses the
+stdlib's native `sys.getwindowsversion` fallback instead of attempting a command.
+The guard is already installed; the original hook is restored in `finally`.
+There is no subprocess or additional writable-path allowance. A bundled Python
+upgrade should rerun the forced-WMI-failure and hook-restoration regression.
 
 After offline tests pass, the separately authorized finite browser smoke uses the
 real launcher, exact own-origin interception, explicit retained profile and

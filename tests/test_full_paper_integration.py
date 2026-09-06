@@ -28,6 +28,23 @@ class FinalReadinessTests(unittest.TestCase):
     def tearDown(self):
         FullPaperTests.tearDown(self)
 
+    def test_staggered_pair_warmup_does_not_discard_ready_pair_signals(self):
+        from trading_stack.paper_runtime import LocalCandleProvider, PaperRuntime
+        from trading_stack.trading_engine import run_trading_engine
+        from trading_stack.models import PaperDecision, TradeExecution
+        self.strategies[0].set_trading_pairs(['BTC/USDT','ETH/USDT'])
+        provider = LocalCandleProvider({'BTC/USDT':candles(),'ETH/USDT':candles().iloc[2:]},'synthetic_staggered_history')
+        runtime = PaperRuntime(provider,self.runtime.config)
+        run_trading_engine(runtime,self.users[0].id,'2026-01-01T01:00:00')
+        self.assertEqual(TradeExecution.query.filter_by(trading_pair='BTC/USDT',status='filled').count(),1)
+        self.assertEqual(PaperDecision.query.filter_by(trading_pair='ETH/USDT').count(),0)
+        run_trading_engine(runtime,self.users[0].id,'2026-01-01T02:00:00')
+        outcomes = {d.trading_pair:d.status for d in PaperDecision.query.filter_by(candle_time='2026-01-01T02:00:00').all()}
+        self.assertEqual(outcomes,{'BTC/USDT':'rejected','ETH/USDT':'unavailable'})
+        run_trading_engine(runtime,self.users[0].id,'2026-01-01T03:00:00')
+        self.assertEqual(TradeExecution.query.filter_by(trading_pair='ETH/USDT',status='filled').count(),1)
+        self.assertFalse(PaperDecision.query.filter_by(trading_pair='BTC/USDT',status='unavailable').all())
+
     def test_hostile_optional_backend_is_never_imported(self):
         import builtins
         from trading_stack.backtesting import run_backtest

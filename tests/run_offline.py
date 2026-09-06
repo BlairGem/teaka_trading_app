@@ -100,11 +100,20 @@ def _install_guard_then_import_numerics(
     global _HOSTNAME_METADATA_ALLOWED
 
     add_guard(_audit_guard)
+    # Python 3.12's Windows platform metadata may fall back from WMI to a
+    # command. Suppress only that fallback so its native getwindowsversion
+    # path is used instead; all process/file audit rules remain active.
+    import platform
+    original_syscmd_ver = platform._syscmd_ver if sys.platform == 'win32' else None
     _HOSTNAME_METADATA_ALLOWED = True
     try:
+        if original_syscmd_ver is not None:
+            platform._syscmd_ver = lambda system='', release='', version='', **_: (system, release, version)
         import_module("numpy")
         import_module("pandas")
     finally:
+        if original_syscmd_ver is not None:
+            platform._syscmd_ver = original_syscmd_ver
         _HOSTNAME_METADATA_ALLOWED = False
 
 

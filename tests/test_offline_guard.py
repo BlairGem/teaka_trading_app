@@ -3,6 +3,9 @@ from __future__ import annotations
 import os
 import unittest
 import uuid
+import sys
+import subprocess
+from unittest.mock import patch
 from pathlib import Path
 
 from tests import run_offline
@@ -15,6 +18,32 @@ def artifact_root() -> Path:
 
 
 class OfflineGuardTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'win32', 'Windows metadata fallback')
+    def test_wmi_failure_uses_native_version_without_command_and_restores_hook(self):
+        import platform
+        original = platform._syscmd_ver
+        versions = []
+        def numerical_import(name):
+            if name == 'pandas':
+                versions.append(platform.win32_ver()[1])
+                with self.assertRaisesRegex(RuntimeError, 'blocked subprocess.Popen'):
+                    subprocess.Popen([sys.executable, '-c', 'raise SystemExit(0)'])
+        with patch.object(platform, '_wmi_query', side_effect=OSError('synthetic WMI unavailable')):
+            run_offline._install_guard_then_import_numerics(add_guard=lambda _:None, import_module=numerical_import)
+        native = sys.getwindowsversion()
+        self.assertEqual(versions, ['.'.join(str(v) for v in (native.platform_version or native[:3]))])
+        self.assertIs(platform._syscmd_ver, original)
+        with self.assertRaisesRegex(ValueError, 'synthetic import failure'):
+            run_offline._install_guard_then_import_numerics(add_guard=lambda _:None,
+                import_module=lambda _: (_ for _ in ()).throw(ValueError('synthetic import failure')))
+        self.assertIs(platform._syscmd_ver, original)
+
+    def test_real_subprocess_and_devnull_write_remain_denied(self):
+        with self.assertRaisesRegex(RuntimeError, 'blocked subprocess.Popen'):
+            subprocess.Popen([sys.executable, '-c', 'raise SystemExit(0)'])
+        with self.assertRaisesRegex(RuntimeError, 'blocked open outside'):
+            os.open(os.devnull, os.O_RDWR)
+
     def test_numeric_bootstrap_installs_guard_before_imports(self) -> None:
         calls = []
 
