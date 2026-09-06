@@ -2,11 +2,11 @@
 
 **Status: Running**
 
-- Published UTC: 2026-09-06T16:58:48+00:00
-- Worker snapshot observed UTC: 2026-09-06T16:58:33+00:00
-- Last processed candle start UTC: 2026-09-06T16:57:00+00:00
+- Published UTC: 2026-09-06T16:59:48+00:00
+- Worker snapshot observed UTC: 2026-09-06T16:59:34+00:00
+- Last processed candle start UTC: 2026-09-06T16:58:00+00:00
 - Run deadline UTC: 2026-09-07T00:01:54+00:00
-- Next local check UTC: 2026-09-06T16:59:18+00:00
+- Next local check UTC: 2026-09-06T17:00:18+00:00
 
 | Virtual metric | USDT |
 |---|---:|
@@ -18,7 +18,7 @@
 | Cash | 9999.2233 |
 | Fees charged | 0.4997 |
 
-Paper decisions: **58**. Simulated fills: **10**.
+Paper decisions: **59**. Simulated fills: **10**.
 
 Latest simulated mark: **79685.7000 USDT**. This is not a live tick.
 
@@ -29,4 +29,4 @@ Signals use the prior completed candle. Fills simulate the following candle open
 Held exposure remains marked at the last valid candle when the run stops; no artificial liquidation. If the published timestamp stops advancing, treat this page as stale.
 New meaningful one-minute snapshots normally publish at most once per minute; unchanged checks are skipped. GitHub caching may delay visibility. Another chat or reader must poll the stable status URL for updates.
 
-Snapshot generation: `a70561c1fbda412aa2f8b79cdf2fe108`
+Snapshot generation: `7c14d5a7260840df99b480ad18e8ec5b`
