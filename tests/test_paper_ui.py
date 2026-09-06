@@ -1,9 +1,49 @@
 """Rendered paper workspace and offline full-session contracts."""
 import json
+import logging
 import os
+import secrets
 import unittest
 from pathlib import Path
 from tests import test_full_paper_integration as integration
+
+
+class PaperSessionLifetimeTests(unittest.TestCase):
+    def test_registration_and_login_survive_aged_memory_connection(self):
+        from trading_stack.app import create_app
+        from trading_stack.database import db
+        from trading_stack.models import User
+
+        app = create_app({'TESTING': False})
+        client = app.test_client()
+        username = 'lifetime_' + secrets.token_hex(6)
+        password = secrets.token_urlsafe(24)
+        prior_logging = logging.root.manager.disable
+        logging.disable(logging.CRITICAL)  # Never print request fields on RED.
+        try:
+            # Age the actual SQLAlchemy pool record; no sleep or simulated DB.
+            with app.app_context():
+                db.engine.pool.connection.starttime -= 301
+            response = client.post('/auth/register', data={
+                'username': username, 'email': username + '@example.invalid',
+                'password': password, 'confirm_password': password})
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.headers['Location'], '/auth/login')
+            with app.app_context():
+                self.assertEqual(User.query.count(), 1)
+                db.session.remove()
+                db.engine.pool.connection.starttime -= 3600
+            response = client.post('/auth/login', data={'username': username, 'password': password})
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(client.get('/api/paper/status').status_code, 200)
+            with app.app_context():
+                self.assertEqual(User.query.count(), 1)
+                self.assertEqual(app.config['SQLALCHEMY_DATABASE_URI'], 'sqlite://')
+                self.assertFalse(app.config['LIVE_TRADING_ENABLED'])
+                db.session.remove()
+                db.engine.dispose()
+        finally:
+            logging.disable(prior_logging)
 
 
 class PaperUITests(unittest.TestCase):

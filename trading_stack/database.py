@@ -20,7 +20,9 @@ def create_app(settings=None):
     # Database configuration (SQLite by default for local / phone-side bring-up)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite://"
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_recycle": 300,
+        # The SQLite memory database lives in this connection. Recycling it
+        # would discard every table and account on the next checkout.
+        "pool_recycle": -1,
         "pool_pre_ping": True,
     }
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
