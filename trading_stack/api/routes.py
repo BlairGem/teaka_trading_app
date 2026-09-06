@@ -5,41 +5,42 @@ from flask import request, jsonify, Blueprint
 from flask_login import login_required, current_user
 import pandas as pd
 
-from models import (
-    User, TradingStrategy, TradingSignal, TradeExecution, 
-    BacktestResult, MLModel, db
-)
-from market_data import (
-    get_latest_prices, get_historical_data, 
-    setup_websocket_connection
-)
-from technical_indicators import apply_indicators, calculate_support_resistance, detect_patterns
-from backtesting import run_backtest, get_backtest_result
-from trading_engine import (
-    get_active_positions, get_recent_trades, 
-    close_position, execute_trade_from_signal
-)
-from unified_trading import unified_trading
-from ml_models import (
-    create_ml_model, get_model_details, 
-    get_user_models, predict_with_model
-)
-from risk_management import (
-    calculate_portfolio_risk, calculate_position_exposure,
-    get_risk_metrics_for_strategy
-)
-from matlab_integration import (
-    get_matlab_signal, run_matlab_backtest,
-    optimize_strategy_parameters
-)
-from messaging import (
-    send_signal_notification, send_trade_execution_notification,
-    send_error_notification
-)
-
 logger = logging.getLogger(__name__)
 
-def init_app(app):
+def init_legacy_app(app):
+    from models import (
+        User, TradingStrategy, TradingSignal, TradeExecution,
+        BacktestResult, MLModel, db
+    )
+    from market_data import (
+        get_latest_prices, get_historical_data,
+        setup_websocket_connection
+    )
+    from technical_indicators import apply_indicators, calculate_support_resistance, detect_patterns
+    from backtesting import run_backtest, get_backtest_result
+    from trading_engine import (
+        get_active_positions, get_recent_trades,
+        close_position, execute_trade_from_signal
+    )
+    from unified_trading import unified_trading
+    from ml_models import (
+        create_ml_model, get_model_details,
+        get_user_models, predict_with_model
+    )
+    from risk_management import (
+        calculate_portfolio_risk, calculate_position_exposure,
+        get_risk_metrics_for_strategy
+    )
+    from matlab_integration import (
+        get_matlab_signal, run_matlab_backtest,
+        optimize_strategy_parameters
+    )
+    from messaging import (
+        send_signal_notification, send_trade_execution_notification,
+        send_error_notification
+    )
+
+
     """Initialize API routes for the Flask app."""
     api_bp = Blueprint('api', __name__, url_prefix='/api')
     
@@ -1048,3 +1049,10 @@ def init_app(app):
     app.register_blueprint(api_bp)
     
     logger.info("API routes initialized")
+
+
+def init_app(app):
+    if app.config.get('TEAKA_MODE') != 'paper':
+        raise ValueError('This application factory supports paper mode only')
+    from .paper_routes import init_app as init_paper
+    init_paper(app)

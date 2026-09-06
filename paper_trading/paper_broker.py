@@ -98,9 +98,10 @@ def _validate_config(config: PaperConfig) -> None:
 class PaperBroker:
     """Paper-only broker with no exchange SDK imports or network order routes."""
 
-    def __init__(self, config: PaperConfig, log_path: Optional[Path] = None) -> None:
+    def __init__(self, config: PaperConfig, log_path: Optional[Path] = None, clock=None) -> None:
         _validate_config(config)
         self.config = config
+        self.clock = clock
         self.cash = float(config.initial_cash)
         self.positions: Dict[str, Position] = {}
         self.last_prices: Dict[str, float] = {}
@@ -111,9 +112,8 @@ class PaperBroker:
         if self.log_path:
             self.log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    @staticmethod
-    def _now() -> str:
-        return datetime.now(timezone.utc).isoformat()
+    def _now(self) -> str:
+        return self.clock() if self.clock is not None else datetime.now(timezone.utc).isoformat()
 
     @staticmethod
     def _valid_number(value: float) -> bool:

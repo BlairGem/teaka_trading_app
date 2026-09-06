@@ -1,8 +1,28 @@
 from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from database import db
+from .database import db
 import json
+
+
+class PaperRun(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    data_origin = db.Column(db.Text, nullable=False)
+    start_time = db.Column(db.String(64), nullable=False)
+    end_time = db.Column(db.String(64), nullable=False)
+    summary = db.Column(db.Text)
+
+
+class PaperDecision(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey('paper_run.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    strategy_id = db.Column(db.Integer, db.ForeignKey('trading_strategy.id'))
+    candle_time = db.Column(db.String(64), nullable=False)
+    trading_pair = db.Column(db.String(32), nullable=False)
+    status = db.Column(db.String(32), nullable=False)
+    reason = db.Column(db.Text)
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

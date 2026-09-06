@@ -65,6 +65,8 @@ def _require_artifact_path(value: object, event: str) -> None:
 
 
 def _audit_guard(event: str, args: tuple[object, ...]) -> None:
+    if event == "sqlite3.connect" and args[0] != ":memory:":
+        raise RuntimeError("offline test blocked non-memory sqlite database")
     if event == "socket.gethostname" and _HOSTNAME_METADATA_ALLOWED:
         return
     if (
@@ -127,6 +129,7 @@ def main() -> int:
         "tests.test_paper_accounting",
         "tests.test_offline_guard",
         "tests.test_strategy_contracts",
+        "tests.test_full_paper_integration",
     ]
     suite = unittest.TestSuite(loader.loadTestsFromName(name) for name in test_names)
     print(f"Preserved test artifacts: {ARTIFACT_ROOT}")
