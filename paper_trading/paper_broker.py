@@ -48,10 +48,58 @@ class Fill:
     reason: str = ""
 
 
+def _validate_config(config: PaperConfig) -> None:
+    positive_fields = ("initial_cash", "max_order_notional")
+    for field in positive_fields:
+        value = getattr(config, field)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or value <= 0
+        ):
+            raise ValueError(f"{field} must be a positive finite number")
+
+    percentage_fields = ("max_position_pct", "max_drawdown_pct")
+    for field in percentage_fields:
+        value = getattr(config, field)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or not 0 < value <= 1
+        ):
+            raise ValueError(f"{field} must be a finite number in (0, 1]")
+
+    for field in ("fee_bps", "slippage_bps"):
+        value = getattr(config, field)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or not 0 <= value < 10_000
+        ):
+            raise ValueError(f"{field} must be a finite number in [0, 10000)")
+
+    if (
+        not isinstance(config.allowed_symbols, tuple)
+        or not config.allowed_symbols
+        or any(
+            not isinstance(symbol, str) or not symbol.strip()
+            for symbol in config.allowed_symbols
+        )
+    ):
+        raise ValueError("allowed_symbols must be a non-empty tuple of non-blank strings")
+
+    if config.allow_shorting is not False:
+        raise ValueError("allow_shorting=True is not supported by the paper broker")
+
+
 class PaperBroker:
     """Paper-only broker with no exchange SDK imports or network order routes."""
 
     def __init__(self, config: PaperConfig, log_path: Optional[Path] = None) -> None:
+        _validate_config(config)
         self.config = config
         self.cash = float(config.initial_cash)
         self.positions: Dict[str, Position] = {}
@@ -143,7 +191,7 @@ class PaperBroker:
             return self._reject(symbol, side, quantity, mark_price, strategy, "symbol_not_allowed")
 
         self.mark(symbol, mark_price)
-        if self.kill_switch:
+        if self.kill_switch and side == "BUY":
             return self._reject(symbol, side, quantity, mark_price, strategy, "kill_switch_active")
 
         slip = self.config.slippage_bps / 10_000.0
@@ -151,13 +199,18 @@ class PaperBroker:
         notional = quantity * fill_price
         fee = notional * self.config.fee_bps / 10_000.0
 
-        if notional > self.config.max_order_notional + 1e-9:
+        position = self.positions.get(symbol)
+        if side == "SELL" and (position is None or quantity > position.quantity + 1e-9):
+            return self._reject(symbol, side, quantity, mark_price, strategy, "shorting_disabled")
+        if side == "BUY" and notional > self.config.max_order_notional + 1e-9:
             return self._reject(symbol, side, quantity, mark_price, strategy, "max_order_notional")
 
-        position = self.positions.setdefault(symbol, Position(symbol=symbol))
         equity_before = self.equity()
 
         if side == "BUY":
+            if position is None:
+                position = Position(symbol=symbol)
+                self.positions[symbol] = position
             if self.cash + 1e-9 < notional + fee:
                 return self._reject(
                     symbol, side, quantity, mark_price, strategy, "insufficient_virtual_cash"
@@ -166,15 +219,13 @@ class PaperBroker:
             projected_value = projected_qty * fill_price
             if projected_value > equity_before * self.config.max_position_pct + 1e-9:
                 return self._reject(symbol, side, quantity, mark_price, strategy, "max_position_pct")
-            total_cost = position.quantity * position.average_cost + notional
+            total_cost = position.quantity * position.average_cost + notional + fee
             position.quantity = projected_qty
             position.average_cost = total_cost / projected_qty
             self.cash -= notional + fee
         else:
-            if not self.config.allow_shorting and quantity > position.quantity + 1e-9:
-                return self._reject(symbol, side, quantity, mark_price, strategy, "shorting_disabled")
-            sold_qty = min(quantity, position.quantity) if not self.config.allow_shorting else quantity
-            position.realized_pnl += sold_qty * (fill_price - position.average_cost) - fee
+            assert position is not None
+            position.realized_pnl += quantity * (fill_price - position.average_cost) - fee
             position.quantity -= quantity
             self.cash += notional - fee
             if abs(position.quantity) < 1e-12:
@@ -221,5 +272,9 @@ class PaperBroker:
 def load_config(path: Path) -> PaperConfig:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     if "allowed_symbols" in raw:
+        if not isinstance(raw["allowed_symbols"], list):
+            raise ValueError("allowed_symbols must be a JSON array")
         raw["allowed_symbols"] = tuple(raw["allowed_symbols"])
-    return PaperConfig(**raw)
+    config = PaperConfig(**raw)
+    _validate_config(config)
+    return config

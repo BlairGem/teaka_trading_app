@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import tempfile
+import os
 import unittest
+import uuid
 from pathlib import Path
 
 from paper_broker import PaperBroker, PaperConfig
@@ -9,8 +10,15 @@ from paper_broker import PaperBroker, PaperConfig
 
 class PaperBrokerTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.tempdir = tempfile.TemporaryDirectory()
-        self.log = Path(self.tempdir.name) / "fills.jsonl"
+        artifact_root = Path(
+            os.environ.get(
+                "TEAKA_TEST_ARTIFACT_ROOT",
+                Path(__file__).resolve().parent / "state" / "test-artifacts",
+            )
+        )
+        self.artifact_dir = artifact_root / f"existing-{uuid.uuid4().hex}"
+        self.artifact_dir.mkdir(parents=True, exist_ok=False)
+        self.log = self.artifact_dir / "fills.jsonl"
         self.config = PaperConfig(
             initial_cash=10_000,
             max_order_notional=2_000,
@@ -20,9 +28,6 @@ class PaperBrokerTests(unittest.TestCase):
             slippage_bps=5,
             allowed_symbols=("BTC-USDT",),
         )
-
-    def tearDown(self) -> None:
-        self.tempdir.cleanup()
 
     def test_buy_and_sell_are_virtual(self) -> None:
         broker = PaperBroker(self.config, self.log)
