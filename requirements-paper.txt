@@ -1,0 +1,7 @@
+# Minimal development/runtime dependencies for the full Flask paper integration.
+# Numerical packages already exist in the bundled runtime; no broker SDK required.
+Flask==3.1.0
+Flask-Login==0.6.3
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.40
+requests==2.32.3

@@ -21,6 +21,7 @@ bridge/brain/
 __pycache__/
 *.py[cod]
 .venv/
+.venv-paper/
 venv/
 
 # Node
