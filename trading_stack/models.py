@@ -163,6 +163,7 @@ class TradingSignal(db.Model):
 class TradeExecution(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    strategy_id = db.Column(db.Integer, db.ForeignKey('trading_strategy.id'), nullable=True, index=True)
     signal_id = db.Column(db.Integer, db.ForeignKey('trading_signal.id'), nullable=True)
     trading_pair = db.Column(db.String(16), nullable=False)
     order_type = db.Column(db.String(4), nullable=False)  # BUY or SELL

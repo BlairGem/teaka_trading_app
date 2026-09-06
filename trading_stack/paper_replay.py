@@ -30,7 +30,7 @@ def _replay_csv(runtime, user_id, csv_path, pair, timeframe, start, end, data_or
     content = source.read_bytes()
     signature = (str(source), hashlib.sha256(content).hexdigest(), pair, timeframe, data_origin)
     existing = getattr(runtime, 'csv_signature', None)
-    if existing != signature and (runtime.seen or any(b.fills for b in runtime.accounts.values())):
+    if existing != signature and (runtime.processed_candles or runtime.results or runtime.seen or any(b.fills for b in runtime.accounts.values())):
         raise ValueError('A different CSV requires a fresh runtime to preserve account history')
     from io import BytesIO
     data = pd.read_csv(BytesIO(content))

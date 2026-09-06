@@ -32,6 +32,12 @@ def _paper_runtime(runtime=None):
 
 
 def run_trading_engine(runtime=None, user_id=None, candle_time=None):
+    runtime = _paper_runtime(runtime)
+    with runtime.lock:
+        return _run_paper_candle(runtime, user_id, candle_time)
+
+
+def _run_paper_candle(runtime, user_id, candle_time):
     """Process one finite local candle through actual ORM strategies and signals."""
     from .paper_runtime import timestamp
     from .technical_indicators import IndicatorUnavailableError
@@ -40,6 +46,7 @@ def run_trading_engine(runtime=None, user_id=None, candle_time=None):
         raise ValueError('Paper engine requires user_id and candle_time')
     runtime.user(user_id)
     current = timestamp(candle_time)
+    runtime.validate_clock_advance(user_id, current)
     if (user_id, current.isoformat()) in runtime.processed_candles:
         return
     provider = runtime.provider
@@ -51,7 +58,7 @@ def run_trading_engine(runtime=None, user_id=None, candle_time=None):
     # At an open only earlier completed candles may inform the decision.
     prior = sorted({t for frame in provider.frames.values() for t in frame.index if t < current})
     if prior and (provider.clock is None or provider.clock < prior[-1]):
-        provider.advance(prior[-1])
+        runtime._advance_clock(user_id, prior[-1])
     broker = runtime.account(user_id)
     for pair, row in rows.items():
         broker.mark(pair.replace('/', '-'), float(row['open']))
@@ -94,7 +101,7 @@ def run_trading_engine(runtime=None, user_id=None, candle_time=None):
             pending.append((strategy, signals, keys, None))
         except (ModelUnavailableError, IndicatorUnavailableError, ValueError) as exc:
             pending.append((strategy, None, keys, str(exc)))
-    provider.advance(current)
+    runtime._advance_clock(user_id, current)
     for strategy, signals, keys, error in pending:
         eligible = {key[2] for key in keys}
         if error:

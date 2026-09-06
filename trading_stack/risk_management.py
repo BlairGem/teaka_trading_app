@@ -98,6 +98,8 @@ def check_risk_limits(
     latest_prices_provider=None,
     strategy_provider=None,
     strategy=None,
+    requested_quantity=None,
+    stop_loss=None,
 ):
     """Check if a trade passes risk management rules."""
     try:
@@ -174,15 +176,21 @@ def check_risk_limits(
             or risk_pct > 100
         ):
             return False
-        derived_stop = entry_price * (1 - stop_loss_pct / 100)
-        if _positive_number(derived_stop) is None:
+        derived_stop = entry_price * (1 - stop_loss_pct / 100) if stop_loss is None else _positive_number(stop_loss)
+        if _positive_number(derived_stop) is None or derived_stop >= entry_price:
             return False
-        position_size = calculate_position_size(
+        maximum_size = calculate_position_size(
             account_balance=account_balance,
             entry_price=entry_price,
             stop_loss=derived_stop,
             risk_per_trade_pct=risk_pct,
         )
+        if requested_quantity is None:
+            position_size = maximum_size
+        else:
+            position_size = _positive_number(requested_quantity)
+            if position_size is None or position_size > maximum_size + 1e-9:
+                return False
         position_value = position_size * current_price
         return (
             _positive_number(position_size) is not None

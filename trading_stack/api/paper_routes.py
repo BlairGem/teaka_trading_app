@@ -150,7 +150,7 @@ def init_app(app):
     @login_required
     def strategy_risk(strategy_id):
         row = TradingStrategy.query.filter_by(id=strategy_id, user_id=current_user.id).first_or_404()
-        trades = TradeExecution.query.join(TradingSignal).filter(TradingSignal.strategy_id == row.id, TradeExecution.user_id == current_user.id).all()
+        trades = TradeExecution.query.filter_by(strategy_id=row.id, user_id=current_user.id).all()
         return jsonify(mode='paper', data={'execution_count': len(trades), 'fees': sum(t.fee or 0 for t in trades)})
 
     @bp.route('/backtests/<int:backtest_id>')

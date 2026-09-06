@@ -59,6 +59,9 @@ class LocalCandleProvider:
         when = timestamp(when)
         if self.clock is not None and when < self.clock:
             raise ValueError('Replay clock cannot move backward')
+        guard = getattr(self, '_advance_guard', None)
+        if guard is not None:
+            guard(when)
         self.clock = when
 
     def get_historical_data(self, trading_pair, timeframe, *, start_date=None, end_date=None, limit=100):
@@ -92,6 +95,49 @@ class PaperRuntime:
         self.processed_candles = set()
         self.current_run = None
         self.lock = threading.RLock()
+
+    @property
+    def provider(self):
+        return self._provider
+
+    @provider.setter
+    def provider(self, provider):
+        if (hasattr(self, '_provider') and provider is not self._provider
+            and (getattr(self, 'processed_candles', None) or getattr(self, 'results', None)
+                 or getattr(self, 'seen', None) or any(b.fills for b in getattr(self, 'accounts', {}).values()))):
+            raise ValueError('Replacing processed market data requires a fresh runtime')
+        self._provider = provider
+        provider._advance_guard = lambda when: self.validate_clock_advance(
+            getattr(self, '_advancing_user', None), when)
+
+    def validate_clock_advance(self, user_id, when, scheduled_candles=()):
+        """Fail before mutation if advancement would strand any held account.
+
+        A replay may schedule all intermediate candles for its own user. A
+        direct engine call must process the next known candle while exposure
+        is held. Advancing another user's clock cannot bypass that exposure.
+        """
+        when = timestamp(when)
+        clock = self.provider.clock
+        if clock is None or when <= clock:
+            return
+        held_users = {lot['user_id'] for lot in self.lots.values() if lot['amount'] > 0}
+        if held_users - {user_id}:
+            raise ValueError('Shared clock advancement would skip a held account; process its candles or close it first')
+        if user_id in held_users:
+            scheduled = set(scheduled_candles)
+            for frame in self.provider.frames.values():
+                for candle in frame.index:
+                    if clock < candle < when and candle not in scheduled and (user_id, candle.isoformat()) not in self.processed_candles:
+                        raise ValueError('Shared clock advancement would skip an unprocessed candle for a held account')
+
+    def _advance_clock(self, user_id, when):
+        self.validate_clock_advance(user_id, when)
+        self._advancing_user = user_id
+        try:
+            self.provider.advance(when)
+        finally:
+            self._advancing_user = None
 
     def user(self, user_id):
         user = db.session.get(User, int(user_id))
@@ -170,14 +216,15 @@ class PaperRuntime:
             elif notional > equity * user.max_position_size_pct / 100 + 1e-9:
                 risk_reason = 'user_position_limit'
             else:
-                # The manual context represents this requested quantity, not a
-                # different active strategy's default size.
+                # Keep the strategy's maximum risk budget separate from the
+                # requested quantity used for exposure and position limits.
                 context = strategy or SimpleNamespace(stop_loss_pct=(price - stop) / price * 100,
-                    risk_per_trade_pct=quantity * (price - stop) / equity * 100)
+                    risk_per_trade_pct=1.0)
                 if not check_risk_limits(user, pair, price,
                     account_balance_provider=lambda _: self.balance(user_id),
                     active_positions_provider=self.positions,
-                    latest_prices_provider=lambda: {pair: price}, strategy=context):
+                    latest_prices_provider=lambda: {pair: price}, strategy=context,
+                    requested_quantity=quantity, stop_loss=stop):
                     risk_reason = 'shared_risk_limits'
         if risk_reason:
             if signal is not None:
@@ -191,7 +238,7 @@ class PaperRuntime:
         filled = fill.status == 'FILLED'
         if signal is not None:
             signal.status = 'executed' if filled else 'rejected'
-        execution = TradeExecution(user_id=user_id, signal_id=signal.id if signal is not None else None,
+        execution = TradeExecution(user_id=user_id, strategy_id=strategy_id, signal_id=signal.id if signal is not None else None,
             trading_pair=pair, order_type=side, order_id=fill.order_id, amount=fill.quantity,
             price=fill.fill_price, timestamp=self.provider.clock.to_pydatetime(),
             status=fill.status.lower(), platform='paper', fee=fill.fee,
@@ -246,6 +293,7 @@ class PaperRuntime:
             times = sorted({t for frame in self.provider.frames.values() for t in frame.index if start <= t <= end})
             if not times or (self.provider.clock is not None and times[0] < self.provider.clock):
                 raise ValueError('No replay candles or range moves backward')
+            self.validate_clock_advance(user_id, times[-1], scheduled_candles=times)
             self.user(user_id)
             run = PaperRun(user_id=user_id, data_origin=self.provider.data_origin, start_time=start.isoformat(), end_time=end.isoformat())
             db.session.add(run)

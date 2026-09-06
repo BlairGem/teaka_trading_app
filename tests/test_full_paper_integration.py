@@ -283,6 +283,141 @@ class FullPaperTests(unittest.TestCase):
         self.assertIsNone(get_position_details(position['id'], self.users[1].id))
         self.assertEqual(update_orders_status()['mode'], 'paper')
 
+    def test_other_user_forward_replay_cannot_skip_held_account_events(self):
+        from trading_stack.models import PaperRun, TradeExecution
+        from trading_stack.trading_engine import run_trading_engine
+        from trading_stack.paper_runtime import LocalCandleProvider
+        data = candles()
+        data.loc[data.index[2], 'low'] = 90
+        self.runtime.provider = LocalCandleProvider({'BTC/USDT': data}, 'synthetic_test_fixture', '1h')
+        for strategy in self.strategies:
+            strategy.is_active = False
+        self.db.session.commit()
+        self.runtime.provider.advance('2026-01-01')
+        self.runtime.manual_order(self.users[0].id, 'BTC/USDT', 'BUY', 1)
+        before = (self.runtime.provider.clock, self.runtime.balance(self.users[0].id), self.runtime.positions(self.users[0].id), PaperRun.query.count(), TradeExecution.query.count(), set(self.runtime.accounts))
+        with self.assertRaisesRegex(ValueError, 'held account'):
+            self.runtime.replay(self.users[1].id, '2026-01-01T01:00:00', '2026-01-01T04:00:00')
+        self.assertEqual(before, (self.runtime.provider.clock, self.runtime.balance(self.users[0].id), self.runtime.positions(self.users[0].id), PaperRun.query.count(), TradeExecution.query.count(), set(self.runtime.accounts)))
+        for target in ('2026-01-01T01:00:00', '2026-01-01T04:00:00'):
+            with self.assertRaisesRegex(ValueError, 'held account'):
+                run_trading_engine(self.runtime, self.users[1].id, target)
+        # The owner can still process every required event and receive the stop.
+        result = self.runtime.replay(self.users[0].id, '2026-01-01T01:00:00', '2026-01-01T04:00:00')
+        self.assertEqual(result['fills'][0]['timestamp'], '2026-01-01T02:00:00')
+        self.assertAlmostEqual(result['fills'][0]['requested_price'], 98)
+        self.assertEqual(self.runtime.positions(self.users[0].id), [])
+
+    def test_same_user_direct_engine_and_replay_gaps_reject_before_mutation(self):
+        from trading_stack.trading_engine import run_trading_engine
+        from trading_stack.models import PaperRun, TradeExecution
+        self.provider.advance('2026-01-01')
+        self.runtime.manual_order(self.users[0].id, 'BTC/USDT', 'BUY', 1)
+        before = (self.provider.clock, self.runtime.balance(self.users[0].id), self.runtime.positions(self.users[0].id), PaperRun.query.count(), TradeExecution.query.count())
+        with self.assertRaisesRegex(ValueError, 'unprocessed candle'):
+            run_trading_engine(self.runtime, self.users[0].id, '2026-01-01T03:00:00')
+        with self.assertRaisesRegex(ValueError, 'unprocessed candle'):
+            self.runtime.replay(self.users[0].id, '2026-01-01T03:00:00', '2026-01-01T04:00:00')
+        self.assertEqual(before, (self.provider.clock, self.runtime.balance(self.users[0].id), self.runtime.positions(self.users[0].id), PaperRun.query.count(), TradeExecution.query.count()))
+
+    def test_direct_provider_advancement_cannot_bypass_held_account_clock(self):
+        self.provider.advance('2026-01-01')
+        self.runtime.manual_order(self.users[0].id, 'BTC/USDT', 'BUY', 1)
+        with self.assertRaisesRegex(ValueError, 'held account'):
+            self.provider.advance('2026-01-01T04:00:00')
+        self.assertEqual(self.provider.clock.isoformat(), '2026-01-01T00:00:00')
+
+    def test_inactive_replay_prevents_dataset_replacement_and_false_provenance(self):
+        from trading_stack.paper_replay import replay_csv
+        root = Path(os.environ['TEAKA_TEST_ARTIFACT_ROOT'])
+        first_csv, second_csv = root / 'inactive-one.csv', root / 'inactive-two.csv'
+        candles().rename_axis('timestamp').to_csv(first_csv)
+        (candles() * 2).rename_axis('timestamp').to_csv(second_csv)
+        for strategy in self.strategies:
+            strategy.is_active = False
+        self.db.session.commit()
+        first = replay_csv(self.runtime, self.users[0].id, first_csv, 'BTC/USDT', '1h', '2026-01-01', '2026-01-01T04:00:00', 'synthetic_one', root / 'inactive-first.json')
+        self.assertEqual(first['fill_count'], 0)
+        before = (self.runtime.provider, self.runtime.provider.clock, dict(self.runtime.results), set(self.runtime.processed_candles))
+        with self.assertRaisesRegex(ValueError, 'fresh runtime'):
+            replay_csv(self.runtime, self.users[0].id, second_csv, 'BTC/USDT', '1h', '2026-01-01', '2026-01-01T04:00:00', 'synthetic_two', root / 'inactive-second.json')
+        from trading_stack.paper_runtime import LocalCandleProvider
+        with self.assertRaisesRegex(ValueError, 'fresh runtime'):
+            self.runtime.provider = LocalCandleProvider({'BTC/USDT': candles() * 2}, 'synthetic_two', '1h')
+        self.assertEqual(before, (self.runtime.provider, self.runtime.provider.clock, dict(self.runtime.results), set(self.runtime.processed_candles)))
+
+    def test_manual_signal_uses_requested_quantity_but_preserves_strategy_max_risk(self):
+        from trading_stack.models import TradingSignal, TradeExecution
+        from trading_stack.trading_engine import execute_trade_from_signal
+        self.provider.advance('2026-01-01')
+        strategy = self.strategies[0]
+        strategy.risk_per_trade_pct = 2
+        signal = TradingSignal(user_id=self.users[0].id, strategy_id=strategy.id, trading_pair='BTC/USDT', signal_type='BUY', status='pending', entry_price=100, stop_loss=98, take_profit=104)
+        self.db.session.add(signal)
+        self.db.session.commit()
+        self.assertTrue(execute_trade_from_signal(signal, 1, self.runtime, self.users[0].id))
+        self.assertEqual(TradeExecution.query.filter_by(signal_id=signal.id).one().amount, 1)
+        lot = self.runtime.positions(self.users[0].id)[0]
+        self.runtime.close(self.users[0].id, lot['id'])
+        strategy.risk_per_trade_pct = .001
+        self.db.session.commit()
+        rejected = self.runtime.submit(self.users[0].id, 'BTC/USDT', 'BUY', 1, 100, strategy=strategy, stop=98, take=104)
+        self.assertFalse(rejected['success'])
+        self.assertEqual(rejected['error'], 'risk_per_trade_limit')
+
+    def test_strategy_metrics_include_owned_entry_and_each_signal_less_close(self):
+        from trading_stack.paper_runtime import LocalCandleProvider, PaperRuntime
+        from trading_stack.models import TradingSignal, TradeExecution
+        from trading_stack.trading_engine import execute_trade_from_signal, run_trading_engine
+        client = self.app.test_client()
+        with client.session_transaction() as session:
+            session['_user_id'] = str(self.users[0].id)
+        self.strategies[1].is_active = False
+        strategy = self.strategies[0]
+        strategy.is_active = False
+        self.db.session.commit()
+        for reason in ('stop_loss', 'take_profit', 'final_liquidation', 'manual_close'):
+            with self.subTest(reason=reason):
+                data = candles()
+                if reason == 'stop_loss':
+                    data.loc[data.index[1], 'low'] = 90
+                if reason == 'take_profit':
+                    data.loc[data.index[1], 'high'] = 110
+                runtime = PaperRuntime(LocalCandleProvider({'BTC/USDT': data}, 'synthetic_test_fixture', '1h'), self.runtime.config)
+                self.app.extensions['paper_runtime'] = runtime
+                runtime.provider.advance('2026-01-01')
+                signal = TradingSignal(user_id=self.users[0].id, strategy_id=strategy.id, trading_pair='BTC/USDT', signal_type='BUY', status='pending', entry_price=100, stop_loss=98, take_profit=104)
+                self.db.session.add(signal)
+                self.db.session.commit()
+                self.assertTrue(execute_trade_from_signal(signal, 1, runtime, self.users[0].id))
+                if reason in ('stop_loss', 'take_profit'):
+                    run_trading_engine(runtime, self.users[0].id, '2026-01-01T01:00:00')
+                elif reason == 'final_liquidation':
+                    runtime.replay(self.users[0].id, '2026-01-01T01:00:00', '2026-01-01T01:00:00')
+                else:
+                    lot = runtime.positions(self.users[0].id)[0]
+                    self.assertTrue(client.post(f"/api/positions/{lot['id']}/close").json['success'])
+                rows = TradeExecution.query.filter_by(user_id=self.users[0].id).all()
+                closing = rows[-1]
+                self.assertIsNone(closing.signal_id)
+                self.assertEqual(closing.strategy_id, strategy.id)
+                self.assertEqual(json.loads(closing.notes)['reason'], reason)
+                metrics = client.get(f'/api/strategies/{strategy.id}/risk-metrics').json['data']
+                self.assertEqual(metrics['execution_count'], len(rows))
+                self.assertAlmostEqual(metrics['fees'], sum(row.fee for row in rows))
+        # Another user's execution/strategy must never enter these totals.
+        self.db.session.add(TradeExecution(user_id=self.users[1].id, strategy_id=strategy.id,
+            trading_pair='BTC/USDT', order_type='SELL', amount=1, price=100, fee=100,
+            status='filled', platform='paper'))
+        self.db.session.commit()
+        isolated = client.get(f'/api/strategies/{strategy.id}/risk-metrics').json['data']
+        self.assertEqual(isolated, metrics)
+        from flask import g
+        g.pop('_login_user', None)
+        with client.session_transaction() as session:
+            session['_user_id'] = str(self.users[1].id)
+        self.assertEqual(client.get(f'/api/strategies/{strategy.id}/risk-metrics').status_code, 404)
+
     def test_manual_requested_quantity_risk_and_owned_close_bypass_limits(self):
         self.provider.advance("2026-01-01")
         user = self.users[0]
