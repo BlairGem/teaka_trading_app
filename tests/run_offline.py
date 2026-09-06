@@ -15,6 +15,7 @@ ARTIFACT_ROOT = (
     if (value := os.environ.get("TEAKA_TEST_ARTIFACT_ROOT"))
     else None
 )
+_HOSTNAME_METADATA_ALLOWED = False
 
 DENIED_FILE_MUTATIONS = frozenset(
     {
@@ -64,6 +65,8 @@ def _require_artifact_path(value: object, event: str) -> None:
 
 
 def _audit_guard(event: str, args: tuple[object, ...]) -> None:
+    if event == "socket.gethostname" and _HOSTNAME_METADATA_ALLOWED:
+        return
     if (
         event.startswith("socket.")
         or event == "subprocess.Popen"
@@ -89,6 +92,20 @@ def _audit_guard(event: str, args: tuple[object, ...]) -> None:
         _require_artifact_path(args[0], event)
 
 
+def _install_guard_then_import_numerics(
+    add_guard=sys.addaudithook, import_module=importlib.import_module
+) -> None:
+    global _HOSTNAME_METADATA_ALLOWED
+
+    add_guard(_audit_guard)
+    _HOSTNAME_METADATA_ALLOWED = True
+    try:
+        import_module("numpy")
+        import_module("pandas")
+    finally:
+        _HOSTNAME_METADATA_ALLOWED = False
+
+
 def main() -> int:
     global ARTIFACT_ROOT
 
@@ -97,11 +114,9 @@ def main() -> int:
     ARTIFACT_ROOT.mkdir(exist_ok=False)
     os.environ["TEAKA_TEST_ARTIFACT_ROOT"] = str(ARTIFACT_ROOT)
     sys.dont_write_bytecode = True
-    # Pandas asks Windows for the hostname while importing. Load only the approved
-    # numerical runtime before the guard; every project import remains guarded.
-    importlib.import_module("numpy")
-    importlib.import_module("pandas")
-    sys.addaudithook(_audit_guard)
+    # Pandas asks Windows for hostname metadata during import. The guard allows
+    # only that local metadata event; socket creation/connect remains denied.
+    _install_guard_then_import_numerics()
     sys.path.insert(0, str(WORKTREE))
     sys.path.insert(0, str(WORKTREE / "paper_trading"))
 

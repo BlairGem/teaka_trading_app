@@ -161,7 +161,7 @@ def _normalize_history(data, start_date, end_date, limit):
         frame.index = pd.to_datetime(frame.index, utc=True)
     required = ["open", "high", "low", "close", "volume"]
     if any(column not in frame.columns for column in required):
-        return pd.DataFrame(columns=required)
+        raise ValueError("historical data must contain open/high/low/close/volume")
     frame = frame.sort_index()
     if start_date is not None:
         frame = frame.loc[_date_bound(start_date, "start_date") : _date_bound(end_date, "end_date")]
@@ -171,6 +171,17 @@ def _normalize_history(data, start_date, end_date, limit):
         frame = frame.tail(limit)
     for column in required:
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    numeric = frame[required]
+    finite = numeric.apply(lambda series: series.map(math.isfinite)).all().all()
+    positive_prices = (numeric[["open", "high", "low", "close"]] > 0).all().all()
+    valid_volume = (numeric["volume"] >= 0).all()
+    valid_ranges = (
+        (numeric["high"] >= numeric[["open", "close"]].max(axis=1)).all()
+        and (numeric["low"] <= numeric[["open", "close"]].min(axis=1)).all()
+        and (numeric["high"] >= numeric["low"]).all()
+    )
+    if not (finite and positive_prices and valid_volume and valid_ranges):
+        raise ValueError("historical OHLCV values must be finite and economically valid")
     return frame[required]
 
 

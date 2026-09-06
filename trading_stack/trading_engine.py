@@ -29,7 +29,12 @@ def run_trading_engine():
                     account_balance = get_account_balance(user)
                     
                     # Verify if the trade passes risk management checks
-                    if check_risk_limits(user, signal.trading_pair, signal.entry_price):
+                    if check_risk_limits(
+                        user,
+                        signal.trading_pair,
+                        signal.entry_price,
+                        strategy=strategy,
+                    ):
                         # Calculate position size based on risk parameters
                         position_size = calculate_position_size(
                             account_balance,

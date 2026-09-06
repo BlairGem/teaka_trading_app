@@ -15,6 +15,33 @@ def artifact_root() -> Path:
 
 
 class OfflineGuardTests(unittest.TestCase):
+    def test_numeric_bootstrap_installs_guard_before_imports(self) -> None:
+        calls = []
+
+        def import_module(name):
+            calls.append(("import", name))
+            if name == "pandas":
+                run_offline._audit_guard("socket.gethostname", ())
+
+        run_offline._install_guard_then_import_numerics(
+            add_guard=lambda guard: calls.append(("guard", guard)),
+            import_module=import_module,
+        )
+
+        self.assertEqual(calls[0], ("guard", run_offline._audit_guard))
+        self.assertEqual(calls[1:], [("import", "numpy"), ("import", "pandas")])
+
+    def test_socket_events_are_denied_outside_numeric_bootstrap(self) -> None:
+        for event in (
+            "socket.gethostname",
+            "socket.__new__",
+            "socket.connect",
+            "socket.getaddrinfo",
+        ):
+            with self.subTest(event=event):
+                with self.assertRaises(RuntimeError):
+                    run_offline._audit_guard(event, ())
+
     def test_deletion_events_are_denied_inside_artifact_root(self) -> None:
         inside = artifact_root() / "preserve-me"
 

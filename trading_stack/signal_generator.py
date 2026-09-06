@@ -185,6 +185,8 @@ def generate_technical_signal(
     else:
         stop_loss = entry_price * (1 + strategy.stop_loss_pct / 100)
         take_profit = entry_price * (1 - strategy.take_profit_pct / 100)
+    if not _finite_positive(stop_loss) or not _finite_positive(take_profit):
+        return None
 
     factory = signal_factory or _default_signal_factory
     signal = factory(
@@ -253,10 +255,17 @@ def generate_ml_signal(
         model_id=strategy.ml_model_id,
         data=data
     )
+    try:
+        prediction = float(prediction)
+        confidence = float(confidence)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(prediction) or not math.isfinite(confidence):
+        return None
     
     # Only generate a signal if confidence is above threshold
     confidence_threshold = 0.6  # 60% confidence minimum
-    if confidence < confidence_threshold:
+    if confidence < confidence_threshold or confidence > 1:
         return None
     
     # Determine signal type based on prediction
@@ -270,6 +279,14 @@ def generate_ml_signal(
     # Get latest candle data for prices
     latest_candle = data.iloc[-1]
     entry_price = latest_candle['close']
+    if not _finite_positive(entry_price):
+        return None
+    stop_pct = getattr(strategy, "stop_loss_pct", None)
+    take_pct = getattr(strategy, "take_profit_pct", None)
+    if not _finite_positive(stop_pct) or not _finite_positive(take_pct):
+        return None
+    if stop_pct > 100 or take_pct > 100:
+        return None
     
     # Calculate stop loss and take profit
     if signal_type == 'BUY':
@@ -278,6 +295,8 @@ def generate_ml_signal(
     else:  # SELL signal
         stop_loss = entry_price * (1 + strategy.stop_loss_pct / 100)
         take_profit = entry_price * (1 - strategy.take_profit_pct / 100)
+    if not _finite_positive(stop_loss) or not _finite_positive(take_profit):
+        return None
     
     # Create and return the signal
     factory = signal_factory or _default_signal_factory

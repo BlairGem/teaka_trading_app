@@ -97,6 +97,7 @@ def check_risk_limits(
     active_positions_provider=None,
     latest_prices_provider=None,
     strategy_provider=None,
+    strategy=None,
 ):
     """Check if a trade passes risk management rules."""
     try:
@@ -121,15 +122,6 @@ def check_risk_limits(
             except ImportError:
                 from market_data import get_latest_prices
             latest_prices_provider = get_latest_prices
-        if strategy_provider is None:
-            try:
-                from .models import TradingStrategy
-            except ImportError:
-                from models import TradingStrategy
-            strategy_provider = lambda user_id: TradingStrategy.query.filter_by(
-                user_id=user_id, is_active=True
-            ).first()
-
         account_balance = normalize_account_equity(
             account_balance_provider(user), trading_pair
         )
@@ -169,26 +161,34 @@ def check_risk_limits(
         if _positive_number(current_price) is None:
             return False
 
-        strategy = strategy_provider(user.id)
+        if strategy is None and strategy_provider is not None:
+            strategy = strategy_provider(user.id)
         if not strategy:
             return False
         stop_loss_pct = getattr(strategy, "stop_loss_pct", None)
         risk_pct = getattr(strategy, "risk_per_trade_pct", None)
         if (
             _positive_number(stop_loss_pct) is None
-            or stop_loss_pct > 100
+            or stop_loss_pct >= 100
             or _positive_number(risk_pct) is None
             or risk_pct > 100
         ):
             return False
+        derived_stop = entry_price * (1 - stop_loss_pct / 100)
+        if _positive_number(derived_stop) is None:
+            return False
         position_size = calculate_position_size(
             account_balance=account_balance,
             entry_price=entry_price,
-            stop_loss=entry_price * (1 - stop_loss_pct / 100),
+            stop_loss=derived_stop,
             risk_per_trade_pct=risk_pct,
         )
         position_value = position_size * current_price
-        return math.isfinite(position_value) and position_value <= max_position_value
+        return (
+            _positive_number(position_size) is not None
+            and _positive_number(position_value) is not None
+            and position_value <= max_position_value
+        )
     except Exception as e:
         logger.error(f"Error checking risk limits: {e}")
         return False
