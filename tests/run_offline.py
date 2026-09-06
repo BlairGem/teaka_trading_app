@@ -9,11 +9,34 @@ from pathlib import Path
 
 WORKTREE = Path(__file__).resolve().parents[1]
 ARTIFACT_PARENT = WORKTREE / "paper_trading" / "state" / "test-artifacts"
-ARTIFACT_PARENT.mkdir(parents=True, exist_ok=True)
-ARTIFACT_ROOT = ARTIFACT_PARENT / f"run-{uuid.uuid4().hex}"
-ARTIFACT_ROOT.mkdir(exist_ok=False)
-os.environ["TEAKA_TEST_ARTIFACT_ROOT"] = str(ARTIFACT_ROOT)
-sys.dont_write_bytecode = True
+ARTIFACT_ROOT = (
+    Path(value).resolve(strict=False)
+    if (value := os.environ.get("TEAKA_TEST_ARTIFACT_ROOT"))
+    else None
+)
+
+DENIED_FILE_MUTATIONS = frozenset(
+    {
+        "os.chflags",
+        "os.chmod",
+        "os.chown",
+        "os.ftruncate",
+        "os.lchflags",
+        "os.lchmod",
+        "os.lchown",
+        "os.link",
+        "os.remove",
+        "os.removexattr",
+        "os.rename",
+        "os.replace",
+        "os.rmdir",
+        "os.setxattr",
+        "os.symlink",
+        "os.truncate",
+        "os.unlink",
+        "os.utime",
+    }
+)
 
 
 def _resolved_path(value: object) -> Path | None:
@@ -31,7 +54,11 @@ def _resolved_path(value: object) -> Path | None:
 
 def _require_artifact_path(value: object, event: str) -> None:
     path = _resolved_path(value)
-    if path is None or (path != ARTIFACT_ROOT and ARTIFACT_ROOT not in path.parents):
+    if (
+        ARTIFACT_ROOT is None
+        or path is None
+        or (path != ARTIFACT_ROOT and ARTIFACT_ROOT not in path.parents)
+    ):
         raise RuntimeError(f"offline test blocked {event} outside {ARTIFACT_ROOT}")
 
 
@@ -46,6 +73,9 @@ def _audit_guard(event: str, args: tuple[object, ...]) -> None:
     ):
         raise RuntimeError(f"offline test blocked {event}")
 
+    if event in DENIED_FILE_MUTATIONS:
+        raise RuntimeError(f"offline test blocked {event}")
+
     if event == "open":
         path, mode, flags = args
         writes = isinstance(mode, str) and any(flag in mode for flag in "wax+")
@@ -54,24 +84,28 @@ def _audit_guard(event: str, args: tuple[object, ...]) -> None:
             writes = writes or bool(flags & write_flags)
         if writes:
             _require_artifact_path(path, event)
-    elif event in {"os.mkdir", "os.remove", "os.rmdir", "os.unlink", "os.symlink"}:
+    elif event == "os.mkdir":
         _require_artifact_path(args[0], event)
-    elif event in {"os.rename", "os.replace", "os.link"}:
-        _require_artifact_path(args[0], event)
-        _require_artifact_path(args[1], event)
-
-
-sys.addaudithook(_audit_guard)
-sys.path.insert(0, str(WORKTREE))
-sys.path.insert(0, str(WORKTREE / "paper_trading"))
 
 
 def main() -> int:
+    global ARTIFACT_ROOT
+
+    ARTIFACT_PARENT.mkdir(parents=True, exist_ok=True)
+    ARTIFACT_ROOT = ARTIFACT_PARENT / f"run-{uuid.uuid4().hex}"
+    ARTIFACT_ROOT.mkdir(exist_ok=False)
+    os.environ["TEAKA_TEST_ARTIFACT_ROOT"] = str(ARTIFACT_ROOT)
+    sys.dont_write_bytecode = True
+    sys.addaudithook(_audit_guard)
+    sys.path.insert(0, str(WORKTREE))
+    sys.path.insert(0, str(WORKTREE / "paper_trading"))
+
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite(
         (
             loader.loadTestsFromName("paper_trading.test_paper_broker"),
             loader.loadTestsFromName("tests.test_paper_accounting"),
+            loader.loadTestsFromName("tests.test_offline_guard"),
         )
     )
     print(f"Preserved test artifacts: {ARTIFACT_ROOT}")
