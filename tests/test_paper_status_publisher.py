@@ -1,4 +1,5 @@
 """Offline public-summary privacy, lifecycle, and fixed-target API contracts."""
+import base64
 import json
 import os
 from pathlib import Path
@@ -219,7 +220,10 @@ class PublisherTests(unittest.TestCase):
             with patch('trading_stack.paper_status_publisher.subprocess.run',
                        return_value=SimpleNamespace(returncode=0, stdout=response)) as call:
                 self.assertIs(worker_alive(123, self.folder()), expected)
-                script = call.call_args.args[0][-1]
+                command = call.call_args.args[0]
+                self.assertIn('-EncodedCommand', command)
+                self.assertTrue(Path(command[0]).is_absolute())
+                script = base64.b64decode(command[-1]).decode('utf-16le')
                 self.assertIn('ProcessId = 123', script)
                 self.assertIn('overnight_paper', script)
                 self.assertIn('ConvertTo-Json -InputObject ([bool]$paperMatch)', script)

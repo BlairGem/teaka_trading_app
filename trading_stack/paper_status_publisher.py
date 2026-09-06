@@ -77,7 +77,11 @@ def worker_alive(pid, run_dir):
         'ConvertTo-Json -InputObject ([bool]$paperMatch) -Compress'
     )
     try:
-        result = subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script],
+        executable = shutil.which('powershell.exe') or shutil.which('pwsh.exe')
+        if executable is None:
+            return None
+        encoded_script = base64.b64encode(script.encode('utf-16le')).decode('ascii')
+        result = subprocess.run([executable, '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded_script],
                                 capture_output=True, text=True, timeout=20, check=False,
                                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         if result.returncode or result.stdout.strip() not in ('true', 'false'):
