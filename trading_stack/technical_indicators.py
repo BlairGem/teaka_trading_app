@@ -1,203 +1,177 @@
 import logging
-import numpy as np
 import pandas as pd
-import talib
-from datetime import datetime
-from matlab_integration import get_matlab_indicator_values
+
+try:
+    from .strategy_contracts import normalize_indicators_config
+except ImportError:  # Preserve direct script-style imports used by the legacy app.
+    from strategy_contracts import normalize_indicators_config
 
 logger = logging.getLogger(__name__)
 
-def apply_indicators(data, indicators_config):
-    """Apply technical indicators to the input data."""
+
+class IndicatorUnavailableError(RuntimeError):
+    """Raised when a requested optional indicator backend is unavailable."""
+
+
+def apply_indicators(data, indicators_config, optional_backend=None):
+    """Apply normalized indicators without initializing optional runtimes."""
     if data.empty:
-        logger.warning("Empty data provided to apply_indicators")
-        return data
-    
-    # Make a copy of the input data
+        return data.copy()
+
     df = data.copy()
-    
-    # Apply each requested indicator
-    for indicator_name, params in indicators_config.items():
-        try:
-            # Call the appropriate indicator function
-            df = calculate_indicator(df, indicator_name, params)
-        except Exception as e:
-            logger.error(f"Error calculating indicator {indicator_name}: {e}")
-            continue
-    
+    for indicator_name, params in normalize_indicators_config(indicators_config).items():
+        df = calculate_indicator(df, indicator_name, params, optional_backend)
     return df
 
-def calculate_indicator(data, indicator_name, params):
-    """Calculate a specific technical indicator."""
-    if data.empty:
-        return data
-    
-    # Make a copy of the input data
-    df = data.copy()
-    
-    # Convert indicator name to lowercase for case-insensitive comparison
-    indicator_lower = indicator_name.lower()
-    
+
+def _optional_talib(optional_backend):
+    if optional_backend is False:
+        raise IndicatorUnavailableError("optional TA-Lib backend is disabled")
+    if optional_backend is not None:
+        return optional_backend
     try:
-        # Moving Averages
-        if indicator_lower == 'sma':
-            period = params.get('period', 20)
-            df[f'sma_{period}'] = talib.SMA(df['close'].values, timeperiod=period)
-        
-        elif indicator_lower == 'ema':
-            period = params.get('period', 20)
-            df[f'ema_{period}'] = talib.EMA(df['close'].values, timeperiod=period)
-        
-        elif indicator_lower == 'wma':
-            period = params.get('period', 20)
-            df[f'wma_{period}'] = talib.WMA(df['close'].values, timeperiod=period)
-        
-        # Oscillators
-        elif indicator_lower == 'rsi':
-            period = params.get('period', 14)
-            df[f'rsi_{period}'] = talib.RSI(df['close'].values, timeperiod=period)
-        
-        elif indicator_lower == 'stochastic':
-            k_period = params.get('k_period', 14)
-            d_period = params.get('d_period', 3)
-            slowing = params.get('slowing', 3)
-            
-            df['stoch_k'], df['stoch_d'] = talib.STOCH(
-                df['high'].values, 
-                df['low'].values, 
-                df['close'].values, 
-                fastk_period=k_period, 
-                slowk_period=slowing, 
-                slowk_matype=0, 
-                slowd_period=d_period, 
-                slowd_matype=0
+        import talib
+    except ImportError as exc:
+        raise IndicatorUnavailableError(
+            "this indicator requires the optional TA-Lib package"
+        ) from exc
+    return talib
+
+
+def calculate_indicator(data, indicator_name, params, optional_backend=None):
+    """Calculate one indicator; core replay indicators use pandas only."""
+    if data.empty:
+        return data.copy()
+
+    df = data.copy()
+    indicator_lower = indicator_name.strip().lower()
+    close = pd.to_numeric(df["close"], errors="coerce")
+
+    if indicator_lower == "sma":
+        period = params.get("period", 20)
+        df[f"sma_{period}"] = close.rolling(period, min_periods=period).mean()
+    elif indicator_lower == "ema":
+        period = params.get("period", 20)
+        df[f"ema_{period}"] = close.ewm(span=period, adjust=False).mean()
+    elif indicator_lower == "rsi":
+        period = params.get("period", 14)
+        delta = close.diff()
+        average_gain = delta.clip(lower=0).ewm(
+            alpha=1 / period, adjust=False, min_periods=period
+        ).mean()
+        average_loss = (-delta.clip(upper=0)).ewm(
+            alpha=1 / period, adjust=False, min_periods=period
+        ).mean()
+        relative_strength = average_gain / average_loss
+        rsi = 100 - (100 / (1 + relative_strength))
+        df[f"rsi_{period}"] = rsi.mask(
+            (average_loss == 0) & (average_gain > 0), 100.0
+        )
+    elif indicator_lower == "macd":
+        fast = params.get("fast_period", 12)
+        slow = params.get("slow_period", 26)
+        signal = params.get("signal_period", 9)
+        fast_ema = close.ewm(span=fast, adjust=False).mean()
+        slow_ema = close.ewm(span=slow, adjust=False).mean()
+        df["macd"] = fast_ema - slow_ema
+        df["macd_signal"] = df["macd"].ewm(span=signal, adjust=False).mean()
+        df["macd_hist"] = df["macd"] - df["macd_signal"]
+    elif indicator_lower in {"bollinger bands", "bbands"}:
+        period = params.get("period", 20)
+        middle = close.rolling(period, min_periods=period).mean()
+        deviation = close.rolling(period, min_periods=period).std(ddof=0)
+        df["bb_middle"] = middle
+        df["bb_upper"] = middle + deviation * params.get("dev_up", 2)
+        df["bb_lower"] = middle - deviation * params.get("dev_down", 2)
+    elif indicator_lower in {"ichimoku", "ichimoku cloud"}:
+        conversion = params.get("conversion_period", 9)
+        base = params.get("base_period", 26)
+        lagging = params.get("lagging_span_period", 52)
+        displacement = params.get("displacement", 26)
+        df["ichimoku_conversion"] = (
+            df["high"].rolling(conversion).max() + df["low"].rolling(conversion).min()
+        ) / 2
+        df["ichimoku_base"] = (
+            df["high"].rolling(base).max() + df["low"].rolling(base).min()
+        ) / 2
+        df["ichimoku_senkou_a"] = (
+            (df["ichimoku_conversion"] + df["ichimoku_base"]) / 2
+        ).shift(displacement)
+        span_b = (
+            df["high"].rolling(lagging).max() + df["low"].rolling(lagging).min()
+        ) / 2
+        df["ichimoku_senkou_b"] = span_b.shift(displacement)
+        # A lagging-only series prevents a replay row from observing a future close.
+        df["ichimoku_chikou"] = close.shift(displacement)
+    elif indicator_lower == "engulfing":
+        df["bullish_engulfing"] = (
+            (df["close"] > df["open"])
+            & (df["close"].shift(1) < df["open"].shift(1))
+            & (df["close"] > df["open"].shift(1))
+            & (df["open"] < df["close"].shift(1))
+        ).astype(int)
+        df["bearish_engulfing"] = (
+            (df["close"] < df["open"])
+            & (df["close"].shift(1) > df["open"].shift(1))
+            & (df["close"] < df["open"].shift(1))
+            & (df["open"] > df["close"].shift(1))
+        ).astype(int)
+    elif indicator_lower == "custom":
+        if optional_backend is False:
+            raise IndicatorUnavailableError("optional MATLAB backend is disabled")
+        try:
+            from .matlab_integration import get_matlab_indicator_values
+        except (ImportError, ModuleNotFoundError) as exc:
+            raise IndicatorUnavailableError(
+                "custom indicators require the optional MATLAB runtime"
+            ) from exc
+        result = get_matlab_indicator_values(df, indicator_name, params)
+        if result is None:
+            raise IndicatorUnavailableError("MATLAB did not produce indicator values")
+        for column, values in result.items():
+            df[column] = values
+    elif indicator_lower in {"wma", "stochastic", "atr", "adx", "obv", "cci"}:
+        talib = _optional_talib(optional_backend)
+        if indicator_lower == "wma":
+            period = params.get("period", 20)
+            df[f"wma_{period}"] = talib.WMA(close.to_numpy(), timeperiod=period)
+        elif indicator_lower == "stochastic":
+            df["stoch_k"], df["stoch_d"] = talib.STOCH(
+                df["high"].to_numpy(),
+                df["low"].to_numpy(),
+                close.to_numpy(),
+                fastk_period=params.get("k_period", 14),
+                slowk_period=params.get("slowing", 3),
+                slowk_matype=0,
+                slowd_period=params.get("d_period", 3),
+                slowd_matype=0,
             )
-        
-        elif indicator_lower == 'macd':
-            fast_period = params.get('fast_period', 12)
-            slow_period = params.get('slow_period', 26)
-            signal_period = params.get('signal_period', 9)
-            
-            df['macd'], df['macd_signal'], df['macd_hist'] = talib.MACD(
-                df['close'].values, 
-                fastperiod=fast_period, 
-                slowperiod=slow_period, 
-                signalperiod=signal_period
+        elif indicator_lower == "atr":
+            df["atr"] = talib.ATR(
+                df["high"].to_numpy(),
+                df["low"].to_numpy(),
+                close.to_numpy(),
+                timeperiod=params.get("period", 14),
             )
-        
-        # Volatility Indicators
-        elif indicator_lower == 'bollinger bands' or indicator_lower == 'bbands':
-            period = params.get('period', 20)
-            dev_up = params.get('dev_up', 2)
-            dev_down = params.get('dev_down', 2)
-            
-            df['bb_upper'], df['bb_middle'], df['bb_lower'] = talib.BBANDS(
-                df['close'].values, 
-                timeperiod=period, 
-                nbdevup=dev_up, 
-                nbdevdn=dev_down, 
-                matype=0
+        elif indicator_lower == "adx":
+            df["adx"] = talib.ADX(
+                df["high"].to_numpy(),
+                df["low"].to_numpy(),
+                close.to_numpy(),
+                timeperiod=params.get("period", 14),
             )
-        
-        elif indicator_lower == 'atr':
-            period = params.get('period', 14)
-            df['atr'] = talib.ATR(
-                df['high'].values, 
-                df['low'].values, 
-                df['close'].values, 
-                timeperiod=period
-            )
-        
-        # Trend Indicators
-        elif indicator_lower == 'adx':
-            period = params.get('period', 14)
-            df['adx'] = talib.ADX(
-                df['high'].values, 
-                df['low'].values, 
-                df['close'].values, 
-                timeperiod=period
-            )
-        
-        # Volume Indicators
-        elif indicator_lower == 'obv':
-            df['obv'] = talib.OBV(df['close'].values, df['volume'].values)
-        
-        # Miscellaneous Indicators
-        elif indicator_lower == 'cci':
-            period = params.get('period', 14)
-            df['cci'] = talib.CCI(
-                df['high'].values, 
-                df['low'].values, 
-                df['close'].values, 
-                timeperiod=period
-            )
-        
-        # Ichimoku Cloud
-        elif indicator_lower == 'ichimoku cloud' or indicator_lower == 'ichimoku':
-            conversion_period = params.get('conversion_period', 9)
-            base_period = params.get('base_period', 26)
-            lagging_span_period = params.get('lagging_span_period', 52)
-            displacement = params.get('displacement', 26)
-            
-            # Tenkan-sen (Conversion Line)
-            high_9 = df['high'].rolling(window=conversion_period).max()
-            low_9 = df['low'].rolling(window=conversion_period).min()
-            df['ichimoku_conversion'] = (high_9 + low_9) / 2
-            
-            # Kijun-sen (Base Line)
-            high_26 = df['high'].rolling(window=base_period).max()
-            low_26 = df['low'].rolling(window=base_period).min()
-            df['ichimoku_base'] = (high_26 + low_26) / 2
-            
-            # Senkou Span A (Leading Span A)
-            df['ichimoku_senkou_a'] = ((df['ichimoku_conversion'] + df['ichimoku_base']) / 2).shift(displacement)
-            
-            # Senkou Span B (Leading Span B)
-            high_52 = df['high'].rolling(window=lagging_span_period).max()
-            low_52 = df['low'].rolling(window=lagging_span_period).min()
-            df['ichimoku_senkou_b'] = ((high_52 + low_52) / 2).shift(displacement)
-            
-            # Chikou Span (Lagging Span)
-            df['ichimoku_chikou'] = df['close'].shift(-displacement)
-        
-        # Price Action Patterns
-        elif indicator_lower == 'engulfing':
-            # Bullish Engulfing
-            df['bullish_engulfing'] = (
-                (df['close'] > df['open']) &  # Current candle is green
-                (df['close'].shift(1) < df['open'].shift(1)) &  # Previous candle is red
-                (df['close'] > df['open'].shift(1)) &  # Current close is higher than previous open
-                (df['open'] < df['close'].shift(1))  # Current open is lower than previous close
-            ).astype(int)
-            
-            # Bearish Engulfing
-            df['bearish_engulfing'] = (
-                (df['close'] < df['open']) &  # Current candle is red
-                (df['close'].shift(1) > df['open'].shift(1)) &  # Previous candle is green
-                (df['close'] < df['open'].shift(1)) &  # Current close is lower than previous open
-                (df['open'] > df['close'].shift(1))  # Current open is higher than previous close
-            ).astype(int)
-        
-        # Custom indicators
-        elif indicator_lower == 'custom':
-            # Try to use MATLAB for custom indicators if available
-            matlab_result = get_matlab_indicator_values(df, indicator_name, params)
-            
-            if matlab_result is not None:
-                # Merge the MATLAB results with our dataframe
-                for col_name, values in matlab_result.items():
-                    df[col_name] = values
-            else:
-                logger.warning(f"Custom indicator {indicator_name} not implemented and MATLAB calculation failed")
-        
+        elif indicator_lower == "obv":
+            df["obv"] = talib.OBV(close.to_numpy(), df["volume"].to_numpy())
         else:
-            logger.warning(f"Unsupported indicator: {indicator_name}")
-        
-        return df
-    
-    except Exception as e:
-        logger.error(f"Error calculating indicator {indicator_name}: {e}")
-        return data  # Return original data on error
+            df["cci"] = talib.CCI(
+                df["high"].to_numpy(),
+                df["low"].to_numpy(),
+                close.to_numpy(),
+                timeperiod=params.get("period", 14),
+            )
+    else:
+        raise ValueError(f"unsupported indicator: {indicator_name}")
+    return df
 
 def calculate_support_resistance(data, period=14, method='peaks'):
     """Calculate support and resistance levels."""
@@ -245,6 +219,8 @@ def detect_patterns(data):
     """Detect candlestick patterns in the data."""
     if data.empty:
         return {}
+
+    talib = _optional_talib(None)
     
     # Make a copy of the input data
     df = data.copy()

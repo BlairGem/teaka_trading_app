@@ -1,117 +1,194 @@
 import logging
-import pandas as pd
-import numpy as np
-from datetime import datetime
-from models import TradeExecution, TradingStrategy, User, db
-from config import MAX_POSITION_SIZE_PERCENTAGE, MAX_OPEN_POSITIONS
+import math
+
+try:
+    from .config import MAX_POSITION_SIZE_PERCENTAGE, MAX_OPEN_POSITIONS
+except ImportError:  # Preserve direct script-style imports used by the legacy app.
+    from config import MAX_POSITION_SIZE_PERCENTAGE, MAX_OPEN_POSITIONS
 
 logger = logging.getLogger(__name__)
 
 def calculate_position_size(account_balance, entry_price, stop_loss, risk_per_trade_pct=1.0):
-    """Calculate position size based on risk management parameters."""
-    if entry_price <= 0 or stop_loss <= 0:
-        logger.error("Invalid entry price or stop loss")
-        return 0
-    
-    # Calculate risk amount in account currency
-    risk_amount = account_balance * (risk_per_trade_pct / 100)
-    
-    # Calculate the difference between entry and stop loss
-    if entry_price > stop_loss:  # Long position
-        risk_per_unit = entry_price - stop_loss
-    else:  # Short position
-        risk_per_unit = stop_loss - entry_price
-    
-    # Avoid division by zero
-    if risk_per_unit <= 0:
-        logger.error("Risk per unit must be greater than zero")
-        return 0
-    
-    # Calculate position size
-    position_size = risk_amount / risk_per_unit
-    
-    # Convert to units
-    units = position_size / entry_price
-    
-    return units
+    """Return asset units whose stop distance risks the requested equity percent."""
+    values = (account_balance, entry_price, stop_loss, risk_per_trade_pct)
+    if any(
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        for value in values
+    ):
+        return 0.0
+    if account_balance <= 0 or entry_price <= 0 or stop_loss <= 0:
+        return 0.0
+    if not 0 < risk_per_trade_pct <= 100:
+        return 0.0
 
-def check_risk_limits(user, trading_pair, entry_price):
+    risk_per_unit = abs(entry_price - stop_loss)
+    if risk_per_unit <= 0:
+        return 0.0
+
+    risk_amount = account_balance * (risk_per_trade_pct / 100)
+    return risk_amount / risk_per_unit
+
+
+def platform_for_trading_pair(trading_pair):
+    if not isinstance(trading_pair, str):
+        return None
+    parts = trading_pair.split("/")
+    if len(parts) != 2 or not all(parts):
+        return None
+    return "binance" if parts[1].upper() == "USDT" else "oanda"
+
+
+def _positive_number(value):
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) and number > 0 else None
+
+
+def normalize_account_equity(account_balance_data, trading_pair=None):
+    """Extract positive equity from paper snapshots or legacy broker balances."""
+    direct = _positive_number(account_balance_data)
+    if direct is not None:
+        return direct
+    equity_method = getattr(account_balance_data, "equity", None)
+    if callable(equity_method):
+        return _positive_number(equity_method()) or 0.0
+    if not isinstance(account_balance_data, dict):
+        return 0.0
+
+    platform = platform_for_trading_pair(trading_pair) if trading_pair else None
+    if platform and platform in account_balance_data:
+        platform_data = account_balance_data[platform]
+        if platform == "binance" and isinstance(platform_data, dict):
+            quote = trading_pair.split("/")[1].upper()
+            balances = platform_data.get("balances")
+            if isinstance(balances, dict) and isinstance(balances.get(quote), dict):
+                quote_data = balances[quote]
+                for field in ("free", "total", "balance"):
+                    value = _positive_number(quote_data.get(field))
+                    if value is not None:
+                        return value
+        nested = normalize_account_equity(platform_data, trading_pair)
+        if nested > 0:
+            return nested
+
+    for field in ("equity", "balance", "cash"):
+        value = _positive_number(account_balance_data.get(field))
+        if value is not None:
+            return value
+    for field in ("paper", "account", "snapshot"):
+        if field in account_balance_data:
+            nested = normalize_account_equity(account_balance_data[field], trading_pair)
+            if nested > 0:
+                return nested
+    return 0.0
+
+
+def check_risk_limits(
+    user,
+    trading_pair,
+    entry_price,
+    account_balance_provider=None,
+    active_positions_provider=None,
+    latest_prices_provider=None,
+    strategy_provider=None,
+):
     """Check if a trade passes risk management rules."""
     try:
-        # Get account balance
-        from broker_apis import get_account_balance
-        account_balance_data = get_account_balance(user)
-        
-        if not account_balance_data:
-            logger.error("Failed to get account balance")
+        if _positive_number(entry_price) is None or platform_for_trading_pair(trading_pair) is None:
             return False
-        
-        # Determine platform based on trading pair (simplified approach)
-        platform = 'binance' if trading_pair in trading_pair.split('/')[1] == 'USDT' else 'oanda'
-        
-        # Get account balance for the specific platform
-        if platform not in account_balance_data:
-            logger.error(f"No account balance data for platform {platform}")
+
+        if account_balance_provider is None:
+            try:
+                from .broker_apis import get_account_balance
+            except ImportError:
+                from broker_apis import get_account_balance
+            account_balance_provider = get_account_balance
+        if active_positions_provider is None:
+            try:
+                from .trading_engine import get_active_positions
+            except ImportError:
+                from trading_engine import get_active_positions
+            active_positions_provider = get_active_positions
+        if latest_prices_provider is None:
+            try:
+                from .market_data import get_latest_prices
+            except ImportError:
+                from market_data import get_latest_prices
+            latest_prices_provider = get_latest_prices
+        if strategy_provider is None:
+            try:
+                from .models import TradingStrategy
+            except ImportError:
+                from models import TradingStrategy
+            strategy_provider = lambda user_id: TradingStrategy.query.filter_by(
+                user_id=user_id, is_active=True
+            ).first()
+
+        account_balance = normalize_account_equity(
+            account_balance_provider(user), trading_pair
+        )
+        if account_balance <= 0:
             return False
-        
-        account_balance = account_balance_data[platform].get('balance', 0)
-        if platform == 'binance':
-            # For Binance, we need to sum up the balances of relevant assets
-            if 'balances' in account_balance_data[platform]:
-                quote_currency = trading_pair.split('/')[1]  # e.g., USDT for BTC/USDT
-                account_balance = account_balance_data[platform]['balances'].get(quote_currency, {}).get('free', 0)
-        
-        # Get active positions
-        from trading_engine import get_active_positions
-        active_positions = get_active_positions(user.id)
-        
-        # Check max positions limit
-        max_positions = user.max_open_positions if user.max_open_positions else MAX_OPEN_POSITIONS
+        active_positions = active_positions_provider(user.id)
+        if not isinstance(active_positions, (list, tuple)):
+            return False
+
+        max_positions = getattr(user, "max_open_positions", None)
+        if max_positions is None:
+            max_positions = MAX_OPEN_POSITIONS
+        if isinstance(max_positions, bool) or not isinstance(max_positions, int) or max_positions <= 0:
+            return False
         if len(active_positions) >= max_positions:
-            logger.warning(f"Maximum number of positions ({max_positions}) already reached")
             return False
-        
-        # Check for existing position in the same trading pair
         for position in active_positions:
-            if position['trading_pair'] == trading_pair:
-                logger.warning(f"Position already exists for {trading_pair}")
+            if isinstance(position, dict) and position.get("trading_pair") == trading_pair:
                 return False
-        
-        # Check max position size as percentage of account
-        max_position_size_pct = user.max_position_size_pct if user.max_position_size_pct else MAX_POSITION_SIZE_PERCENTAGE
-        max_position_value = account_balance * (max_position_size_pct / 100)
-        
-        # Check if the potential trade exceeds the maximum position size
-        from market_data import get_latest_prices
-        latest_prices = get_latest_prices()
-        
-        # If we can't get the current price, use the entry price
-        current_price = latest_prices.get(trading_pair, entry_price)
-        
-        # Get strategy for this trade
-        strategy = TradingStrategy.query.filter_by(user_id=user.id, is_active=True).first()
-        
-        if not strategy:
-            logger.error("No active strategy found for user")
+
+        max_position_size_pct = getattr(user, "max_position_size_pct", None)
+        if max_position_size_pct is None:
+            max_position_size_pct = MAX_POSITION_SIZE_PERCENTAGE
+        if (
+            _positive_number(max_position_size_pct) is None
+            or max_position_size_pct > 100
+        ):
             return False
-        
-        # Calculate position size based on risk management
+        max_position_value = account_balance * (max_position_size_pct / 100)
+
+        latest_prices = latest_prices_provider()
+        current_price = (
+            latest_prices.get(trading_pair, entry_price)
+            if isinstance(latest_prices, dict)
+            else entry_price
+        )
+        if _positive_number(current_price) is None:
+            return False
+
+        strategy = strategy_provider(user.id)
+        if not strategy:
+            return False
+        stop_loss_pct = getattr(strategy, "stop_loss_pct", None)
+        risk_pct = getattr(strategy, "risk_per_trade_pct", None)
+        if (
+            _positive_number(stop_loss_pct) is None
+            or stop_loss_pct > 100
+            or _positive_number(risk_pct) is None
+            or risk_pct > 100
+        ):
+            return False
         position_size = calculate_position_size(
             account_balance=account_balance,
             entry_price=entry_price,
-            stop_loss=entry_price * (1 - strategy.stop_loss_pct / 100),  # Simple calculation for demo
-            risk_per_trade_pct=strategy.risk_per_trade_pct
+            stop_loss=entry_price * (1 - stop_loss_pct / 100),
+            risk_per_trade_pct=risk_pct,
         )
-        
         position_value = position_size * current_price
-        
-        if position_value > max_position_value:
-            logger.warning(f"Position value ({position_value}) exceeds maximum allowed ({max_position_value})")
-            return False
-        
-        # All checks passed
-        return True
-    
+        return math.isfinite(position_value) and position_value <= max_position_value
     except Exception as e:
         logger.error(f"Error checking risk limits: {e}")
         return False
@@ -119,6 +196,15 @@ def check_risk_limits(user, trading_pair, entry_price):
 def calculate_portfolio_risk(user_id):
     """Calculate overall portfolio risk metrics."""
     try:
+        try:
+            from .models import TradeExecution, User
+            from .broker_apis import get_account_balance
+            from .trading_engine import get_active_positions
+        except ImportError:
+            from models import TradeExecution, User
+            from broker_apis import get_account_balance
+            from trading_engine import get_active_positions
+
         # Get user
         user = User.query.get(user_id)
         if not user:
@@ -126,7 +212,6 @@ def calculate_portfolio_risk(user_id):
             return None
         
         # Get account balance
-        from broker_apis import get_account_balance
         account_balance_data = get_account_balance(user)
         
         if not account_balance_data:
@@ -147,7 +232,6 @@ def calculate_portfolio_risk(user_id):
                 total_account_value += balance.get('balance', 0)
         
         # Get active positions
-        from trading_engine import get_active_positions
         active_positions = get_active_positions(user_id)
         
         # Calculate total position value
@@ -178,7 +262,7 @@ def calculate_portfolio_risk(user_id):
         avg_loss = sum(losses) / len(losses) if losses else 0
         
         # Calculate profit factor
-        profit_factor = sum(profits) / sum(losses) if sum(losses) > 0 else float('inf')
+        profit_factor = sum(profits) / sum(losses) if sum(losses) > 0 else None
         
         # Calculate expected value
         expected_value = (win_rate * avg_profit) - ((1 - win_rate) * avg_loss)
@@ -221,21 +305,29 @@ def calculate_drawdown(equity_curve):
     """Calculate drawdown from an equity curve."""
     if not equity_curve:
         return 0, []
-    
-    # Calculate running maximum
-    running_max = pd.Series(equity_curve).cummax()
-    
-    # Calculate drawdown
-    drawdown = (running_max - equity_curve) / running_max
-    
-    # Calculate maximum drawdown
-    max_drawdown = drawdown.max()
-    
-    return max_drawdown, drawdown.tolist()
+
+    running_max = None
+    drawdown = []
+    for raw_value in equity_curve:
+        value = _positive_number(raw_value)
+        if value is None:
+            return 0, []
+        running_max = value if running_max is None else max(running_max, value)
+        drawdown.append((running_max - value) / running_max)
+    return max(drawdown), drawdown
 
 def calculate_position_exposure(user_id):
     """Calculate position exposure by asset class and trading pair."""
     try:
+        try:
+            from .models import User
+            from .broker_apis import get_account_balance
+            from .trading_engine import get_active_positions
+        except ImportError:
+            from models import User
+            from broker_apis import get_account_balance
+            from trading_engine import get_active_positions
+
         # Get user
         user = User.query.get(user_id)
         if not user:
@@ -243,7 +335,6 @@ def calculate_position_exposure(user_id):
             return None
         
         # Get account balance
-        from broker_apis import get_account_balance
         account_balance_data = get_account_balance(user)
         
         if not account_balance_data:
@@ -264,7 +355,6 @@ def calculate_position_exposure(user_id):
                 total_account_value += balance.get('balance', 0)
         
         # Get active positions
-        from trading_engine import get_active_positions
         active_positions = get_active_positions(user_id)
         
         # Calculate exposure by asset class
@@ -318,6 +408,11 @@ def calculate_position_exposure(user_id):
 def get_risk_metrics_for_strategy(strategy_id):
     """Get risk metrics for a specific strategy."""
     try:
+        try:
+            from .models import TradeExecution, TradingStrategy
+        except ImportError:
+            from models import TradeExecution, TradingStrategy
+
         # Get strategy
         strategy = TradingStrategy.query.get(strategy_id)
         if not strategy:
@@ -343,7 +438,7 @@ def get_risk_metrics_for_strategy(strategy_id):
         avg_loss = sum(losses) / len(losses) if losses else 0
         
         # Calculate profit factor
-        profit_factor = sum(profits) / sum(losses) if sum(losses) > 0 else float('inf')
+        profit_factor = sum(profits) / sum(losses) if sum(losses) > 0 else None
         
         # Calculate expected value
         expected_value = (win_rate * avg_profit) - ((1 - win_rate) * avg_loss)

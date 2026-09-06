@@ -1,11 +1,13 @@
 import logging
-import json
+import math
 import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
 import os
-import requests
-from config import CRYPTO_TRADING_PAIRS, FOREX_TRADING_PAIRS
+
+try:
+    from .config import CRYPTO_TRADING_PAIRS, FOREX_TRADING_PAIRS, TEAKA_MODE
+except ImportError:  # Preserve direct script-style imports used by the legacy app.
+    from config import CRYPTO_TRADING_PAIRS, FOREX_TRADING_PAIRS, TEAKA_MODE
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +15,30 @@ logger = logging.getLogger(__name__)
 price_cache = {}
 ohlcv_cache = {}
 
-def get_latest_prices():
+def _valid_price(value):
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and math.isfinite(value)
+        and value > 0
+    )
+
+
+def get_latest_prices(provider=None, as_of=None):
     """Get the latest prices for the configured trading pairs."""
+    pairs = CRYPTO_TRADING_PAIRS + FOREX_TRADING_PAIRS
+    if provider is not None:
+        provided = provider.get_latest_prices(pairs, as_of=as_of)
+        if not isinstance(provided, dict):
+            return {}
+        return {
+            pair: float(price)
+            for pair, price in provided.items()
+            if pair in pairs and _valid_price(price)
+        }
+    if TEAKA_MODE == "paper":
+        return {}
+
     all_prices = {}
     
     # Get crypto prices from KuCoin (only crypto pairs)
@@ -39,6 +63,8 @@ def get_crypto_prices(pairs):
     prices = {}
     
     try:
+        import requests
+
         # Convert trading pairs format from BTC/USDT to BTC-USDT for KuCoin
         formatted_pairs = [p.replace('/', '-') for p in pairs]
         
@@ -76,6 +102,8 @@ def get_forex_prices(pairs):
     prices = {}
     
     try:
+        import requests
+
         # Convert pairs to OANDA format (e.g., EUR_USD)
         formatted_pairs = [p.replace('/', '_') for p in pairs]
         instruments_param = ','.join(formatted_pairs)
@@ -115,9 +143,67 @@ def get_forex_prices(pairs):
     
     return prices
 
-def get_historical_data(trading_pair, timeframe, limit=100):
+def _date_bound(value, field):
+    try:
+        return pd.to_datetime(value, utc=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} must be an ISO date or datetime") from exc
+
+
+def _normalize_history(data, start_date, end_date, limit):
+    if not isinstance(data, pd.DataFrame) or data.empty:
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+    frame = data.copy()
+    if "timestamp" in frame.columns:
+        frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True)
+        frame = frame.set_index("timestamp")
+    else:
+        frame.index = pd.to_datetime(frame.index, utc=True)
+    required = ["open", "high", "low", "close", "volume"]
+    if any(column not in frame.columns for column in required):
+        return pd.DataFrame(columns=required)
+    frame = frame.sort_index()
+    if start_date is not None:
+        frame = frame.loc[_date_bound(start_date, "start_date") : _date_bound(end_date, "end_date")]
+    if limit is not None:
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0:
+            raise ValueError("limit must be a positive integer")
+        frame = frame.tail(limit)
+    for column in required:
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    return frame[required]
+
+
+def get_historical_data(
+    trading_pair,
+    timeframe,
+    limit=100,
+    start_date=None,
+    end_date=None,
+    provider=None,
+):
     """Get historical OHLCV data for a trading pair."""
-    cache_key = f"{trading_pair}_{timeframe}_{limit}"
+    if (start_date is None) != (end_date is None):
+        raise ValueError("start_date and end_date must be provided together")
+    if start_date is not None and _date_bound(start_date, "start_date") > _date_bound(
+        end_date, "end_date"
+    ):
+        raise ValueError("start_date must be on or before end_date")
+    if trading_pair not in CRYPTO_TRADING_PAIRS + FOREX_TRADING_PAIRS:
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+    if provider is not None:
+        data = provider.get_historical_data(
+            trading_pair,
+            timeframe,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+        )
+        return _normalize_history(data, start_date, end_date, limit)
+    if TEAKA_MODE == "paper":
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+
+    cache_key = f"{trading_pair}_{timeframe}_{limit}_{start_date}_{end_date}"
     
     # Check if we have cached data
     if cache_key in ohlcv_cache:
@@ -134,7 +220,7 @@ def get_historical_data(trading_pair, timeframe, limit=100):
         logger.error(f"Unsupported trading pair: {trading_pair}")
         return pd.DataFrame()
     
-    # Cache the result
+    data = _normalize_history(data, start_date, end_date, limit)
     if not data.empty:
         ohlcv_cache[cache_key] = {
             'data': data,
@@ -146,6 +232,8 @@ def get_historical_data(trading_pair, timeframe, limit=100):
 def get_crypto_historical_data(trading_pair, timeframe, limit=100):
     """Get historical data for a crypto pair from Binance."""
     try:
+        import requests
+
         # Convert trading pair and timeframe to Binance format
         symbol = trading_pair.replace('/', '')
         binance_timeframe = convert_timeframe_to_binance(timeframe)
@@ -199,6 +287,8 @@ def get_crypto_historical_data(trading_pair, timeframe, limit=100):
 def get_forex_historical_data(trading_pair, timeframe, limit=100):
     """Get historical data for a forex pair from OANDA."""
     try:
+        import requests
+
         # Convert trading pair and timeframe to OANDA format
         instrument = trading_pair.replace('/', '_')
         oanda_timeframe = convert_timeframe_to_oanda(timeframe)

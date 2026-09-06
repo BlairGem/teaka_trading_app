@@ -4,6 +4,7 @@ import os
 import sys
 import unittest
 import uuid
+import importlib
 from pathlib import Path
 
 
@@ -96,18 +97,23 @@ def main() -> int:
     ARTIFACT_ROOT.mkdir(exist_ok=False)
     os.environ["TEAKA_TEST_ARTIFACT_ROOT"] = str(ARTIFACT_ROOT)
     sys.dont_write_bytecode = True
+    # Pandas asks Windows for the hostname while importing. Load only the approved
+    # numerical runtime before the guard; every project import remains guarded.
+    importlib.import_module("numpy")
+    importlib.import_module("pandas")
     sys.addaudithook(_audit_guard)
     sys.path.insert(0, str(WORKTREE))
     sys.path.insert(0, str(WORKTREE / "paper_trading"))
 
     loader = unittest.defaultTestLoader
-    suite = unittest.TestSuite(
-        (
-            loader.loadTestsFromName("paper_trading.test_paper_broker"),
-            loader.loadTestsFromName("tests.test_paper_accounting"),
-            loader.loadTestsFromName("tests.test_offline_guard"),
-        )
-    )
+    requested = sys.argv[1:]
+    test_names = requested or [
+        "paper_trading.test_paper_broker",
+        "tests.test_paper_accounting",
+        "tests.test_offline_guard",
+        "tests.test_strategy_contracts",
+    ]
+    suite = unittest.TestSuite(loader.loadTestsFromName(name) for name in test_names)
     print(f"Preserved test artifacts: {ARTIFACT_ROOT}")
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     return 0 if result.wasSuccessful() else 1
