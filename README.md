@@ -1,24 +1,32 @@
-# TeAka PAPER trading status
+# BTC/USDT PAPER practice
 
-**PAPER ONLY — real public market candles, simulated money and orders.**
+**Status: Worker identity could not be verified**
 
-Published UTC: 2026-09-06T16:11:36.330160+00:00
+- Published UTC: 2026-09-06T16:19:57+00:00
+- Worker snapshot observed UTC: 2026-09-06T16:19:46+00:00
+- Last processed candle start UTC: 2026-09-06T16:18:00+00:00
+- Run deadline UTC: 2026-09-07T00:01:54+00:00
+- Next local check UTC: 2026-09-06T16:20:27+00:00
 
-Latest worker snapshot UTC: 2026-09-06T16:11:06.035764+00:00
+| Virtual metric | USDT |
+|---|---:|
+| Initial equity | 10000.0000 |
+| Current equity | 9999.7683 |
+| Total PnL | -0.2317 |
+| Realized PnL | -0.1620 |
+| Unrealized PnL | -0.0697 |
+| Cash | 9949.7888 |
+| Fees charged | 0.1499 |
 
-| Measure | Latest observation |
-| --- | --- |
-| Instrument | BTC/USDT |
-| Worker state at last observation | running |
-| Last completed candle UTC | 2026-09-06T16:10:00+00:00 |
-| Virtual starting equity | 10,000.00 USDT |
-| Virtual current equity | 9999.83799168 USDT |
-| Paper profit / loss | -0.16200832 USDT |
-| Decisions | 11 |
-| Simulated fills | 2 |
+Paper decisions: **19**. Simulated fills: **3**.
 
-Periodic publishing is being initialized. Planned cadence: every 15 minutes, bounded to this eight-hour run; this page is not a real-time stream. Always check the publication and worker timestamps.
+Latest simulated mark: **79701.3000 USDT**. This is not a live tick.
 
-Practice: unvalidated SMA20, long only, at most 50 USDT entry notional. Public Kraken completed one-minute candles; simulated next-candle opening fills recorded after candle completion. Fees: 10 basis points; adverse slippage: 5 basis points. Actual spread, depth, queue position and broker matching are not reproduced. Stops within a candle have uncertain execution time.
+Real public Kraken one-minute candles; simulated paper execution only. Unvalidated 20-period SMA practice strategy, long-only, with a 50 USDT entry cap.
 
-Gold is not enabled. This practice runner is not a verified trained model or the entire recovered swarm. No account identifiers, credentials or private logs are published here.
+Signals use the prior completed candle. Fills simulate the following candle open after that candle completes; protective exits use its OHLC range. Fixed 10 bps fees and 5 bps slippage proxy; spread is not separately modeled. These are practice approximations, not brokerage-equivalent execution.
+
+Held exposure remains marked at the last valid candle when the run stops; no artificial liquidation. If the published timestamp stops advancing, treat this page as stale.
+New meaningful one-minute snapshots normally publish at most once per minute; unchanged checks are skipped. GitHub caching may delay visibility. Another chat or reader must poll the stable status URL for updates.
+
+Snapshot generation: `f236db1f01d34508995243771bd37560`
