@@ -2,11 +2,11 @@
 
 **Status: Running**
 
-- Published UTC: 2026-09-06T16:51:18+00:00
-- Worker snapshot observed UTC: 2026-09-06T16:50:53+00:00
-- Last processed candle start UTC: 2026-09-06T16:49:00+00:00
+- Published UTC: 2026-09-06T16:52:48+00:00
+- Worker snapshot observed UTC: 2026-09-06T16:52:25+00:00
+- Last processed candle start UTC: 2026-09-06T16:51:00+00:00
 - Run deadline UTC: 2026-09-07T00:01:54+00:00
-- Next local check UTC: 2026-09-06T16:51:48+00:00
+- Next local check UTC: 2026-09-06T16:53:18+00:00
 
 | Virtual metric | USDT |
 |---|---:|
@@ -18,9 +18,9 @@
 | Cash | 9999.2233 |
 | Fees charged | 0.4997 |
 
-Paper decisions: **50**. Simulated fills: **10**.
+Paper decisions: **52**. Simulated fills: **10**.
 
-Latest simulated mark: **79688.1000 USDT**. This is not a live tick.
+Latest simulated mark: **79708.1000 USDT**. This is not a live tick.
 
 Real public Kraken one-minute candles; simulated paper execution only. Unvalidated 20-period SMA practice strategy, long-only, with a 50 USDT entry cap.
 
@@ -29,4 +29,4 @@ Signals use the prior completed candle. Fills simulate the following candle open
 Held exposure remains marked at the last valid candle when the run stops; no artificial liquidation. If the published timestamp stops advancing, treat this page as stale.
 New meaningful one-minute snapshots normally publish at most once per minute; unchanged checks are skipped. GitHub caching may delay visibility. Another chat or reader must poll the stable status URL for updates.
 
-Snapshot generation: `91d21690aca3428c8da294c71d159bc6`
+Snapshot generation: `13ecf9d62ebd4650884c92d3c5622341`
