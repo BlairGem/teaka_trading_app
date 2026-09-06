@@ -116,6 +116,10 @@ async function main() {
   await page.waitForFunction(() => document.querySelector('#action-status').textContent.includes('Replay complete'));
   const replay = JSON.parse(await page.locator('#replay-result').innerText());
   assert.ok(replay.fill_count >= 2); assert.equal(replay.candle_count,5); assert.ok(replay.source_sha256);
+  assert.equal(replay.decisions.length,replay.decision_count);
+  assert.ok(replay.decisions.some(row => row.signal_id && row.execution_id));
+  assert.ok(replay.decisions.some(row => row.status === 'rejected' && row.reason === 'no_owned_position'));
+  results.decisionAudit = {rendered:replay.decisions.length,linked:replay.decisions.filter(row => row.execution_id).length};
   results.replay = replay; results.cashAfterReplay = await page.locator('#cash').innerText();
   step('Replayed five synthetic candles through local CSV/range/origin form; inspected actual fills, cash, source hash.');
   await page.getByRole('button',{name:'Submit paper order',exact:true}).click();
@@ -162,9 +166,28 @@ async function main() {
   results.success = true;
 }
 main().catch(error => { results.failure = error.stack; process.exitCode = 1; console.error(error.message); }).finally(async () => {
-  if (context) await context.close();
-  if (server && server.exitCode === null) { server.kill(); await new Promise(resolve => server.once('exit',resolve)); }
-  fs.writeFileSync(path.join(artifacts,'launcher-output.txt'),output);
-  fs.writeFileSync(path.join(artifacts,'browser-results.json'),JSON.stringify(results,null,2));
-  console.log(results.success ? 'Browser smoke PASS; owned processes stopped; artifacts retained.' : 'Browser smoke FAILED; owned processes stopped; artifacts retained.');
+  results.cleanupErrors = [];
+  const record = error => {results.cleanupErrors.push(error.message);results.success=false;process.exitCode=1;};
+  const bounded = async (work, label, timeout=10000) => {
+    let timer;
+    try {await Promise.race([work,new Promise((_,reject) => {timer=setTimeout(() => reject(new Error(`${label} timeout`)),timeout);})]);}
+    finally {clearTimeout(timer);}
+  };
+  try {
+    if (context) await bounded(context.close(),'Browser close',45000);
+    results.browserClosed = true;
+  } catch(error) {record(error);}
+  try {
+    if (server && server.exitCode === null) {
+      const exited = new Promise(resolve => server.once('exit',resolve));
+      server.kill();
+      await bounded(exited,'Owned server termination');
+    }
+    results.ownedServerStopped = !server || server.exitCode !== null || server.signalCode != null;
+  } catch(error) {record(error);results.ownedServerStopped=false;}
+  finally {
+    try {fs.writeFileSync(path.join(artifacts,'launcher-output.txt'),output);} catch(error) {record(error);}
+    fs.writeFileSync(path.join(artifacts,'browser-results.json'),JSON.stringify(results,null,2));
+  }
+  console.log(results.success && results.ownedServerStopped ? 'Browser smoke PASS; owned processes stopped; artifacts retained.' : 'Browser smoke FAILED; inspect preserved cleanup evidence.');
 });

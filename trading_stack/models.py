@@ -23,6 +23,8 @@ class PaperDecision(db.Model):
     trading_pair = db.Column(db.String(32), nullable=False)
     status = db.Column(db.String(32), nullable=False)
     reason = db.Column(db.Text)
+    signal_id = db.Column(db.Integer, db.ForeignKey('trading_signal.id'))
+    execution_id = db.Column(db.Integer, db.ForeignKey('trade_execution.id'))
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

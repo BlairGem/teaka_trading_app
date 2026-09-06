@@ -9,6 +9,8 @@ from .signal_generator import generate_signals_for_strategy, ModelUnavailableErr
 from .risk_management import calculate_position_size, check_risk_limits, normalize_account_equity
 
 from . import config
+from .strategy_contracts import exit_conditions_with_default
+from .backtesting import _intrabar_exit_price
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +75,7 @@ def _run_paper_candle(runtime, user_id, candle_time):
             continue
         runtime.seen.update(keys)
         if not prior:
+            pending.append((strategy, None, keys, 'Insufficient completed history: no prior candle'))
             continue
         # ML is explicitly unavailable here regardless of inherited live flags.
         if strategy.use_ml_model:
@@ -91,7 +94,7 @@ def _run_paper_candle(runtime, user_id, candle_time):
                         return getattr(strategy, name)
 
                     def get_entry_conditions(self):
-                        return [dict(rule, signal_type=rule.get('signal_type', rule.get('side', 'SELL'))) for rule in exits]
+                        return exit_conditions_with_default(exits)
 
                 exit_signals = generate_signals_for_strategy(ExitRules(), market_provider=completed,
                     pending_signal_lookup=lambda *_: None, signal_factory=TradingSignal,
@@ -114,8 +117,9 @@ def _run_paper_candle(runtime, user_id, candle_time):
             pair = signal.trading_pair
             signal.timestamp = current.to_pydatetime()
             signal.entry_price = float(rows[pair]['open'])
-            signal.stop_loss = signal.entry_price * (1 - strategy.stop_loss_pct / 100)
-            signal.take_profit = signal.entry_price * (1 + strategy.take_profit_pct / 100)
+            direction = 1 if signal.signal_type == 'BUY' else -1
+            signal.stop_loss = signal.entry_price * (1 - direction * strategy.stop_loss_pct / 100)
+            signal.take_profit = signal.entry_price * (1 + direction * strategy.take_profit_pct / 100)
             metadata = signal.get_signal_data()
             metadata.update(data_origin=provider.data_origin, decision_candle=prior[-1].isoformat(), execution_candle=current.isoformat())
             signal.set_signal_data(metadata)
@@ -128,28 +132,26 @@ def _run_paper_candle(runtime, user_id, candle_time):
                         strategy=strategy, signal=signal, lot_id=lot['id'], reason='signal_exit')
                 else:
                     signal.status = 'rejected'
-                    runtime.decision(user_id, strategy.id, pair, 'rejected', 'no_owned_position')
+                    runtime.decision(user_id, strategy.id, pair, 'rejected', 'no_owned_position', signal_id=signal.id)
             else:
-                equity = normalize_account_equity(runtime.balance(user_id), pair)
-                quantity = calculate_position_size(equity, signal.entry_price, signal.stop_loss, strategy.risk_per_trade_pct)
+                quantity = runtime.automatic_quantity(user_id, strategy, signal.entry_price, signal.stop_loss)
                 if quantity <= 0:
                     signal.status = 'rejected'
-                    runtime.decision(user_id, strategy.id, pair, 'rejected', 'invalid_size')
+                    runtime.decision(user_id, strategy.id, pair, 'rejected', 'invalid_size', signal_id=signal.id)
                     continue
                 runtime.submit(user_id, pair, 'BUY', quantity, signal.entry_price,
                     strategy=strategy, signal=signal, stop=signal.stop_loss, take=signal.take_profit, reason='signal_entry')
         for pair in eligible - {signal.trading_pair for signal in signals}:
-            runtime.decision(user_id, strategy.id, pair, 'no_signal')
-    # Protective orders apply to newly opened and existing lots. At a gap down,
-    # a stop gets the worse open; ambiguous stop/take candles choose stop first.
+            runtime.decision(user_id, strategy.id, pair, 'no_signal', 'No unambiguous rule match on the completed candle')
+    # Resolve opening gaps first; remaining intrabar ambiguity chooses the stop.
     for lot in list(runtime.positions(user_id)):
         row = rows.get(lot['trading_pair'])
         if row is None:
             continue
-        if float(row['low']) <= lot['stop_loss']:
-            runtime.close(user_id, lot['id'], min(float(row['open']), lot['stop_loss']), 'stop_loss')
-        elif float(row['high']) >= lot['take_profit']:
-            runtime.close(user_id, lot['id'], max(float(row['open']), lot['take_profit']), 'take_profit')
+        protection = _intrabar_exit_price(lot, row)
+        if protection:
+            price, reason = protection
+            runtime.close(user_id, lot['id'], price, reason)
     for pair, row in rows.items():
         broker.mark(pair.replace('/', '-'), float(row['close']))
     db.session.commit()

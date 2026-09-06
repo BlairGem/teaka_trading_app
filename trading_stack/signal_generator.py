@@ -7,12 +7,14 @@ try:
         StrategyContractError,
         normalize_operator,
         normalize_strategy_contract,
+        required_history,
     )
 except ImportError:  # Preserve direct script-style imports used by the legacy app.
     from strategy_contracts import (
         StrategyContractError,
         normalize_operator,
         normalize_strategy_contract,
+        required_history,
     )
 
 logger = logging.getLogger(__name__)
@@ -38,20 +40,31 @@ def generate_signals_for_strategy(
         from technical_indicators import IndicatorUnavailableError, apply_indicators
 
     signals = []
+    indicators, conditions = normalize_strategy_contract(strategy.get_indicators_config(), strategy.get_entry_conditions())
+    needed = required_history(indicators, conditions)
     for trading_pair in strategy.get_trading_pairs():
         try:
             historical_data = get_historical_data(
                 trading_pair=trading_pair,
                 timeframe=strategy.timeframe,
-                limit=200,
+                # Preserve recursive EMA/RSI history too, within the finite paper bound.
+                limit=100001,
                 provider=market_provider,
             )
             if historical_data.empty:
-                continue
+                raise IndicatorUnavailableError('Insufficient completed history: no candles')
 
+            if len(historical_data) > 100000:
+                raise IndicatorUnavailableError('History exceeds the 100000 candle paper limit')
             df_with_indicators = apply_indicators(
-                historical_data, strategy.get_indicators_config()
+                historical_data, indicators, optional_backend=False
             )
+            if len(historical_data) < needed:
+                raise IndicatorUnavailableError(f'Insufficient completed history: need {needed} candles, have {len(historical_data)}')
+            for rule in conditions:
+                count = 2 if rule['operator'] in {'crosses_above','crosses_below','increasing','decreasing'} else 1
+                if rule['indicator'] not in df_with_indicators or not all(math.isfinite(float(v)) for v in df_with_indicators[rule['indicator']].tail(count)):
+                    raise IndicatorUnavailableError(f'Indicator unavailable from completed history: {rule["indicator"]}')
             if strategy.use_ml_model and strategy.ml_model_id:
                 signal = generate_ml_signal(
                     strategy,
@@ -73,7 +86,7 @@ def generate_signals_for_strategy(
                 )
             if signal is not None:
                 signals.append(signal)
-        except (ModelUnavailableError, IndicatorUnavailableError):
+        except (ModelUnavailableError, IndicatorUnavailableError, StrategyContractError):
             raise
         except Exception as e:
             logger.error(f"Error generating signals for {trading_pair}: {e}")
@@ -237,20 +250,9 @@ def generate_ml_signal(
     if _recent_pending_signal(strategy, trading_pair, pending_signal_lookup, now):
         return None
     if model_predictor is None:
-        import os
-
-        if os.environ.get("TEAKA_MODE", "paper").lower() == "paper":
-            raise ModelUnavailableError(
-                "paper ML signals require an explicitly injected model predictor"
-            )
-        try:
-            from .ml_models import predict_with_model
-        except ImportError:
-            try:
-                from ml_models import predict_with_model
-            except ImportError as exc:
-                raise ModelUnavailableError("ML model implementation is unavailable") from exc
-        model_predictor = predict_with_model
+        raise ModelUnavailableError(
+            "paper ML signals require an explicitly injected model predictor"
+        )
     prediction, confidence = model_predictor(
         model_id=strategy.ml_model_id,
         data=data

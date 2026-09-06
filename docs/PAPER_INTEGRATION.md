@@ -89,6 +89,27 @@ simulation. API failures visibly mark displayed values stale.
 
 The engine and backtest both use prior completed candle decisions, next-open
 fills and intrabar protection; fees default to 10 bps and slippage to 5 bps.
+Opening gaps resolve before intrabar stop/take ambiguity. Generated BUY quantities
+are capped by available cash including costs, user and broker position limits,
+and broker order notional. Manual requested quantities still face strict checks.
+Legacy exit rules without a side consistently mean SELL; saved API definitions
+make that default explicit. Explicit BUY/SELL editor rules retain their meaning.
+
+Paper calculations explicitly disable optional MATLAB/TA-Lib imports regardless
+of inherited environment flags. Implicit model imports are disabled too. Custom
+or other optional indicators return unavailable decisions. Core indicator history
+uses all available completed candles up to a finite 100000-row limit, preserving
+recursive indicator state; minimum warm-up includes previous values for crossings.
+Insufficient history is auditable as unavailable. Dated backtests fetch completed
+history including warm-up, reject over-limit input, and report available/evaluated
+candle counts, evaluated boundaries, and insufficient-history counts in `coverage`.
+
+Replay JSON, the visible replay result panel and saved run summaries include ordered
+owned decisions with strategy, pair, candle, status, reason and available signal/
+execution links. `/api/paper/decisions` exposes only the signed-in user's decisions,
+including manual and rejected actions. Preserve exported JSON before ending the
+memory-only process; a repeated identical replay returns the same decision snapshot.
+
 Their position-sizing/cost bases can produce slightly different quantities;
 they are separate simulations, not identical performance series. No currency
 conversion or non-USDT accounting is offered. Recovered data/models have not
@@ -131,3 +152,11 @@ Each `browser-*` folder preserves `browser-results.json`, `launcher-output.txt`,
 screenshots, `paper-run-*.json`, `profile` and `browser-artifacts`. This test uses
 disposable memory-only users and never a personal browser profile. It proves the
 local controls work with outside origins blocked, not that external providers work.
+
+The smoke cleanup separately bounds browser close and owned server termination,
+records cleanup failures, and preserves launcher/result evidence. Its exception
+paths can be checked without launching processes or mutating files:
+
+```powershell
+& 'C:\Users\Blair\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' tests/test_browser_cleanup.cjs
+```

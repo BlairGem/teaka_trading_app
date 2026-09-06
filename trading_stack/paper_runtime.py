@@ -159,10 +159,32 @@ class PaperRuntime:
         return [dict(lot, current_price=self.account(user_id).last_prices.get(lot['trading_pair'].replace('/', '-'), lot['entry_price']))
                 for lot in self.lots.values() if lot['user_id'] == user_id and lot['amount'] > 0]
 
-    def decision(self, user_id, strategy_id, pair, status, reason=''):
+    def automatic_quantity(self, user_id, strategy, price, stop):
+        """Cap generated entries; explicitly requested manual sizes stay strict."""
+        broker = self.account(user_id)
+        user = self.user(user_id)
+        equity = broker.equity()
+        fill_price = positive(price) * (1 + broker.config.slippage_bps / 10000)
+        fee_rate = broker.config.fee_bps / 10000
+        return max(0., min(
+            calculate_position_size(equity, price, stop, strategy.risk_per_trade_pct),
+            broker.cash / (fill_price * (1 + fee_rate)),
+            equity * user.max_position_size_pct / 100 / fill_price,
+            equity * broker.config.max_position_pct / fill_price,
+            broker.config.max_order_notional / fill_price,
+        ))
+
+    def decisions(self, user_id, run_id=None):
+        query = PaperDecision.query.filter_by(user_id=user_id)
+        if run_id is not None:
+            query = query.filter_by(run_id=run_id)
+        return [{field: getattr(row, field) for field in ('id','run_id','strategy_id','trading_pair','candle_time','status','reason','signal_id','execution_id')}
+                for row in query.order_by(PaperDecision.id).all()]
+
+    def decision(self, user_id, strategy_id, pair, status, reason='', signal_id=None, execution_id=None):
         row = PaperDecision(run_id=self.current_run, user_id=user_id, strategy_id=strategy_id,
                             candle_time=self.provider.clock.isoformat(), trading_pair=pair,
-                            status=status, reason=reason)
+                            status=status, reason=reason, signal_id=signal_id, execution_id=execution_id)
         db.session.add(row)
         return row
 
@@ -229,7 +251,7 @@ class PaperRuntime:
         if risk_reason:
             if signal is not None:
                 signal.status = 'rejected'
-            self.decision(user_id, strategy_id, pair, 'rejected', risk_reason)
+            self.decision(user_id, strategy_id, pair, 'rejected', risk_reason, signal_id=signal.id if signal else None)
             db.session.commit()
             return {'success': False, 'mode': 'paper', 'error': risk_reason}
         symbol = pair.replace('/', '-')
@@ -254,7 +276,8 @@ class PaperRuntime:
                 'order_type': 'BUY', 'platform': 'paper'}
         elif filled:
             owned['amount'] -= quantity
-        self.decision(user_id, strategy_id, pair, 'filled' if filled else 'rejected', reason if filled else fill.reason)
+        self.decision(user_id, strategy_id, pair, 'filled' if filled else 'rejected', reason if filled else fill.reason,
+                      signal_id=signal.id if signal else None, execution_id=execution.id)
         db.session.commit()
         result = asdict(fill)
         result.update(status=fill.status.lower(), execution_id=execution.id, price=fill.fill_price, amount=fill.quantity)
@@ -310,9 +333,10 @@ class PaperRuntime:
                 economic = {'cash': broker.cash, 'equity': broker.equity(),
                     'realized_pnl': sum(p.realized_pnl for p in broker.positions.values()),
                     'fees': sum(f.fee for f in fills), 'currency': 'USDT'}
+                decisions = self.decisions(user_id, run.id)
                 result = {'run_id': run.id, 'mode': 'paper', 'data_origin': self.provider.data_origin,
                     'start': start.isoformat(), 'end': end.isoformat(), 'candle_count': len(times),
-                    'decision_count': PaperDecision.query.filter_by(run_id=run.id).count(),
+                    'decision_count': len(decisions), 'decisions': decisions,
                     'fill_count': sum(f.status == 'FILLED' for f in fills),
                     'economic_summary': economic, 'fee_bps': self.config.fee_bps,
                     'slippage_bps': self.config.slippage_bps,

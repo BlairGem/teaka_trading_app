@@ -5,11 +5,11 @@ import numpy as np
 from datetime import datetime, timedelta
 
 try:
-    from .strategy_contracts import StrategyContractError, normalize_strategy_contract
+    from .strategy_contracts import StrategyContractError, normalize_strategy_contract, exit_conditions_with_default, required_history
     from .signal_generator import ModelUnavailableError, evaluate_condition
     from .risk_management import calculate_position_size
 except ImportError:  # Preserve direct script-style imports used by the legacy app.
-    from strategy_contracts import StrategyContractError, normalize_strategy_contract
+    from strategy_contracts import StrategyContractError, normalize_strategy_contract, exit_conditions_with_default, required_history
     from signal_generator import ModelUnavailableError, evaluate_condition
     from risk_management import calculate_position_size
 
@@ -55,9 +55,8 @@ def run_backtest(
         if isinstance(end_date, str):
             end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
         
-        # Calculate the date range needed (adding buffer for indicators)
-        date_buffer = timedelta(days=30)  # Buffer for calculating indicators
-        data_start_date = start_date - date_buffer
+        # Fetch all bounded completed history to retain recursive EMA/RSI state.
+        data_start_date = datetime(1970, 1, 1, tzinfo=getattr(start_date, 'tzinfo', None))
         
         # Get historical data
         data = get_historical_data_for_backtest(
@@ -74,7 +73,7 @@ def run_backtest(
         
         # Apply technical indicators
         indicators_config = strategy.get_indicators_config()
-        df_with_indicators = apply_indicators(data, indicators_config)
+        df_with_indicators = apply_indicators(data, indicators_config, optional_backend=False)
         
         # Run backtest simulation
         if strategy.use_ml_model and strategy.ml_model_id:
@@ -129,6 +128,7 @@ def run_backtest(
             'drawdown_curve': backtest_results['drawdown_curve'],
             'data_origin': backtest_results.get('data_origin'),
             'time_range': backtest_results.get('time_range'),
+            'coverage': backtest_results.get('coverage'),
             'assumptions': backtest_results.get('assumptions'),
             'metrics': performance_metrics
         }
@@ -157,14 +157,17 @@ def get_historical_data_for_backtest(
         from .market_data import get_historical_data
     except ImportError:
         from market_data import get_historical_data
-    return get_historical_data(
+    data = get_historical_data(
         trading_pair,
         timeframe,
-        limit=5000,
+        limit=100001,
         start_date=start_date,
         end_date=end_date,
         provider=market_provider,
     )
+    if len(data) > 100000:
+        raise ValueError('Backtest history exceeds the 100000 candle paper limit; use a smaller dataset')
+    return data
 
 def _utc_timestamp(value, field):
     try:
@@ -418,22 +421,20 @@ def backtest_technical_strategy(
         else "unavailable"
     )
     empty = _empty_backtest_result(balance, start, end, data_origin)
+    indicators, entry_conditions = normalize_strategy_contract(
+        strategy.get_indicators_config(), strategy.get_entry_conditions())
+    _, exit_conditions = normalize_strategy_contract(
+        strategy.get_indicators_config(), exit_conditions_with_default(strategy.get_exit_conditions()))
+    needed = required_history(indicators, entry_conditions + exit_conditions)
     frame = _validated_replay_frame(data)
+    empty['coverage'] = {'available_candles': 0, 'evaluated_candles': 0, 'first_evaluated': None, 'last_evaluated': None, 'insufficient_history_candles': 0}
     if frame.empty:
         return empty
     period = frame.loc[start:end]
     if period.empty:
         return empty
 
-    try:
-        _, entry_conditions = normalize_strategy_contract(
-            strategy.get_indicators_config(), strategy.get_entry_conditions()
-        )
-        _, exit_conditions = normalize_strategy_contract(
-            strategy.get_indicators_config(), strategy.get_exit_conditions()
-        )
-    except (StrategyContractError, TypeError, ValueError):
-        return empty
+    empty['coverage']['available_candles'] = len(period)
     if not entry_conditions:
         return empty
 
@@ -445,8 +446,13 @@ def backtest_technical_strategy(
 
     for timestamp, row in period.iterrows():
         location = frame.index.get_loc(timestamp)
-        if not isinstance(location, int) or location == 0:
+        if not isinstance(location, int) or location < needed:
+            empty['coverage']['insufficient_history_candles'] += 1
             continue
+        coverage = empty['coverage']
+        coverage['evaluated_candles'] += 1
+        coverage['first_evaluated'] = coverage['first_evaluated'] or _timestamp_text(timestamp)
+        coverage['last_evaluated'] = _timestamp_text(timestamp)
         signal_row = frame.iloc[location - 1]
         previous_signal_row = frame.iloc[location - 2] if location >= 2 else None
         entry_sides = _matching_rule_sides(
@@ -525,6 +531,7 @@ def backtest_technical_strategy(
         )
 
     result = _empty_backtest_result(balance if not equity_curve else initial_balance, start, end, data_origin)
+    result['coverage'] = empty['coverage']
     result.update(
         {
             "final_balance": float(balance),
@@ -562,20 +569,9 @@ def backtest_ml_strategy(
         )
     )
     if model_predictor is None:
-        import os
-
-        if os.environ.get("TEAKA_MODE", "paper").lower() == "paper":
-            raise ModelUnavailableError(
-                "paper ML backtests require an explicitly injected model predictor"
-            )
-        try:
-            from .ml_models import predict_with_model
-        except ImportError:
-            try:
-                from ml_models import predict_with_model
-            except ImportError as exc:
-                raise ModelUnavailableError("ML model implementation is unavailable") from exc
-        model_predictor = predict_with_model
+        raise ModelUnavailableError(
+            "paper ML backtests require an explicitly injected model predictor"
+        )
 
     start = _utc_timestamp(start_date, "start_date")
     end = _utc_timestamp(end_date, "end_date")

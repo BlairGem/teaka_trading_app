@@ -5,7 +5,7 @@ from pathlib import Path
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from ..models import db, TradingStrategy, TradingSignal, TradeExecution, BacktestResult, PaperRun
-from ..strategy_contracts import normalize_strategy_contract
+from ..strategy_contracts import normalize_strategy_contract, exit_conditions_with_default, required_history
 from ..paper_runtime import positive, supported_pair
 
 
@@ -113,10 +113,12 @@ def init_app(app):
             raise ValueError('Strategy timeframe must match the local dataset')
         indicators = data.get('indicators_config', strategy.get_indicators_config())
         entries = data.get('entry_conditions', strategy.get_entry_conditions())
-        exits = data.get('exit_conditions', strategy.get_exit_conditions())
-        normalize_strategy_contract(indicators, entries)
+        exits = exit_conditions_with_default(data.get('exit_conditions', strategy.get_exit_conditions()))
+        normalized, rules = normalize_strategy_contract(indicators, entries)
+        required_history(normalized, rules)
         if exits:
-            normalize_strategy_contract(indicators, [dict(rule, signal_type=rule.get('signal_type', rule.get('side', 'SELL'))) for rule in exits])
+            _, rules = normalize_strategy_contract(indicators, exits)
+            required_history(normalized, rules)
         for field, default in [('risk_per_trade_pct', 1.), ('stop_loss_pct', 2.), ('take_profit_pct', 4.)]:
             value = positive(data.get(field, getattr(strategy, field) or default))
             if value >= 100:
@@ -197,6 +199,11 @@ def init_app(app):
     @login_required
     def runs():
         return jsonify([serialize(row) for row in PaperRun.query.filter_by(user_id=current_user.id).order_by(PaperRun.id.desc())])
+
+    @bp.route('/paper/decisions')
+    @login_required
+    def decisions():
+        return jsonify(runtime().decisions(current_user.id))
 
     @bp.route('/paper/replay', methods=['POST'])
     @login_required

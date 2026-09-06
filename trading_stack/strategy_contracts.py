@@ -9,6 +9,37 @@ class StrategyContractError(ValueError):
     """Raised when a stored/editor strategy rule cannot be interpreted safely."""
 
 
+def exit_conditions_with_default(raw):
+    """Legacy exit rules imply SELL; explicit sides retain their meaning."""
+    if raw is None:
+        return []
+    if not isinstance(raw, list) or any(not isinstance(rule, Mapping) for rule in raw):
+        raise StrategyContractError('exit conditions must be an array of objects')
+    return [dict(rule, side='SELL') if rule.get('side') is None and rule.get('signal_type') is None else dict(rule) for rule in raw]
+
+
+def required_history(indicators, conditions):
+    """Minimum completed bars, including a previous finite crossing value."""
+    bars = 1
+    for name, params in normalize_indicators_config(indicators).items():
+        if name in {'sma', 'bbands', 'wma'}:
+            count = params.get('period', 20)
+        elif name == 'rsi':
+            count = params.get('period', 14) + 1
+        elif name in {'ichimoku', 'ichimoku cloud'}:
+            count = max(params.get('conversion_period', 9), params.get('base_period', 26), params.get('lagging_span_period', 52)) + params.get('displacement', 26)
+        elif name == 'engulfing':
+            count = 2
+        else:
+            count = 1
+        bars = max(bars, count)
+    if any(rule['operator'] in {'crosses_above','crosses_below','increasing','decreasing'} for rule in conditions):
+        bars += 1
+    if bars > 100000:
+        raise StrategyContractError('Required indicator history exceeds the 100000 candle paper limit')
+    return bars
+
+
 _INDICATOR_ALIASES = {
     "bollinger bands": "bbands",
     "bollinger_bands": "bbands",

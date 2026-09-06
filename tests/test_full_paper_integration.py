@@ -19,6 +19,219 @@ def candles():
                         index=pd.date_range("2026-01-01", periods=5, freq="h"))
 
 
+class FinalReadinessTests(unittest.TestCase):
+    def setUp(self):
+        FullPaperTests.setUp(self)
+        self.strategies[1].is_active = False
+        self.db.session.commit()
+
+    def tearDown(self):
+        FullPaperTests.tearDown(self)
+
+    def test_hostile_optional_backend_is_never_imported(self):
+        import builtins
+        from trading_stack.backtesting import run_backtest
+        from trading_stack.models import PaperDecision
+        self.strategies[0].set_indicators_config({'custom': {}})
+        self.strategies[0].set_entry_conditions([{'indicator':'custom','operator':'>','value':0,'side':'BUY'}])
+        real_import = builtins.__import__
+        attempts = []
+        def guarded_import(name, *args, **kwargs):
+            if 'matlab' in name or name == 'talib':
+                attempts.append(name)
+                raise AssertionError('optional backend import attempted')
+            return real_import(name, *args, **kwargs)
+        with patch.dict(os.environ, {'MATLAB_ENABLED':'true','TEAKA_MODE':'live'}), patch('builtins.__import__', guarded_import):
+            client = self.app.test_client()
+            with client.session_transaction() as session:
+                session['_user_id'] = str(self.users[0].id)
+                session['_fresh'] = True
+            saved = client.put(f'/api/strategies/{self.strategies[0].id}',json={'indicators_config':{'custom':{}},'entry_conditions':[{'indicator':'custom','operator':'>','value':0,'side':'BUY'}]})
+            self.assertEqual(saved.status_code,200)
+            result = self.runtime.replay(self.users[0].id, '2026-01-01', '2026-01-01T04:00:00')
+            run_backtest(self.strategies[0].id,'BTC/USDT','2026-01-01','2026-01-01T04:00:00',market_provider=self.provider)
+        self.assertEqual(attempts, [])
+        self.assertEqual(result['fill_count'],0)
+        self.assertTrue(any('disabled' in (r.reason or '') for r in PaperDecision.query.all()))
+
+    def test_opening_take_gap_precedes_later_stop_touch(self):
+        from trading_stack.trading_engine import run_trading_engine
+        from trading_stack.backtesting import _intrabar_exit_price
+        from trading_stack.models import TradeExecution
+        self.strategies[0].is_active = False
+        self.provider.frames['BTC/USDT'].loc[pd.Timestamp('2026-01-01T01:00:00'),['open','high','low','close']] = [110,111,97,100]
+        self.provider.advance('2026-01-01')
+        self.runtime.submit(self.users[0].id,'BTC/USDT','BUY',1,100,strategy=self.strategies[0],stop=98,take=104)
+        run_trading_engine(self.runtime,self.users[0].id,'2026-01-01T01:00:00')
+        sale = TradeExecution.query.filter_by(order_type='SELL').one()
+        self.assertAlmostEqual(sale.price,110*.9995)
+        self.assertEqual(_intrabar_exit_price({'stop_loss':98,'take_profit':104},self.provider.frames['BTC/USDT'].iloc[1]),(110,'take_profit'))
+
+    def test_automatic_default_size_caps_then_fills(self):
+        from paper_trading.paper_broker import PaperConfig
+        from trading_stack.paper_runtime import PaperRuntime
+        from trading_stack.trading_engine import run_trading_engine
+        self.users[0].max_position_size_pct = 5
+        self.strategies[0].risk_per_trade_pct = 1
+        self.runtime = PaperRuntime(self.provider, PaperConfig())
+        run_trading_engine(self.runtime,self.users[0].id,'2026-01-01T01:00:00')
+        broker = self.runtime.account(self.users[0].id)
+        self.assertEqual(len(broker.fills),1)
+        self.assertEqual(broker.fills[0].status,'FILLED')
+        fill = broker.fills[0]
+        self.assertLessEqual(fill.notional,500+1e-8)
+        self.assertGreater(fill.notional,499)
+        self.assertAlmostEqual(broker.cash,10000-fill.notional-fill.fee)
+        self.assertLessEqual(fill.quantity*2,100)
+
+    def test_long_period_and_cross_use_sufficient_completed_history(self):
+        from trading_stack.paper_runtime import LocalCandleProvider, PaperRuntime
+        from trading_stack.trading_engine import run_trading_engine
+        from trading_stack.models import TradingSignal
+        from trading_stack.signal_generator import generate_technical_signal
+        from trading_stack.technical_indicators import apply_indicators
+        for period, operator, threshold in [(201,'>',0),(200,'crosses_above',223.5)]:
+            frame = pd.DataFrame({'open':range(100,350),'high':range(101,351),'low':range(99,349),'close':range(100,350),'volume':[10]*250},index=pd.date_range('2026-01-01',periods=250,freq='h'))
+            self.strategies[0].set_indicators_config({'sma':{'period':period}})
+            self.strategies[0].set_entry_conditions([{'indicator':'sma','operator':operator,'value':threshold,'side':'BUY'}])
+            runtime = PaperRuntime(LocalCandleProvider({'BTC/USDT':frame},'synthetic_long_history'),self.runtime.config)
+            before = TradingSignal.query.count()
+            current = frame.index[-1] if period == 201 else frame.index[225]
+            complete = apply_indicators(frame.loc[frame.index < current],self.strategies[0].get_indicators_config(),optional_backend=False)
+            expected = generate_technical_signal(self.strategies[0],'BTC/USDT',complete,pending_signal_lookup=lambda *_:None)
+            self.assertEqual(expected.signal_type,'BUY')
+            run_trading_engine(runtime,self.users[0].id,current)
+            self.assertGreater(TradingSignal.query.count(),before)
+            self.assertEqual(TradingSignal.query.order_by(TradingSignal.id.desc()).first().signal_type,expected.signal_type)
+
+    def test_insufficient_history_is_audited(self):
+        from trading_stack.models import PaperDecision
+        self.strategies[0].set_indicators_config({'sma':{'period':201}})
+        self.strategies[0].set_entry_conditions([{'indicator':'sma','operator':'>','value':0,'side':'BUY'}])
+        self.runtime.replay(self.users[0].id,'2026-01-01','2026-01-01T04:00:00')
+        self.assertTrue(any(r.status=='unavailable' and 'history' in r.reason.lower() for r in PaperDecision.query.all()))
+
+    def test_legacy_exit_and_invalid_backtest_contract(self):
+        from trading_stack.backtesting import backtest_technical_strategy
+        from trading_stack.technical_indicators import apply_indicators
+        strategy = self.strategies[0]
+        strategy.set_exit_conditions([{'indicator':'sma','operator':'>','value':100.5}])
+        frame = apply_indicators(candles(),strategy.get_indicators_config(),optional_backend=False)
+        result = backtest_technical_strategy(strategy,frame,'2026-01-01','2026-01-01T04:00:00',10000)
+        self.assertGreater(len(result['trades']),0)
+        strategy.set_exit_conditions([{'indicator':'unknown','operator':'>','value':1}])
+        with self.assertRaises(ValueError):
+            backtest_technical_strategy(strategy,frame,'2026-01-01','2026-01-01T04:00:00',10000)
+
+    def test_backtest_fetch_preserves_6000_bar_range_and_coverage(self):
+        from trading_stack.paper_runtime import LocalCandleProvider
+        from trading_stack.backtesting import get_historical_data_for_backtest, backtest_technical_strategy
+        frame = pd.DataFrame({'open':[100]*6000,'high':[101]*6000,'low':[99]*6000,'close':[100]*6000,'volume':[1]*6000},index=pd.date_range('2026-01-01',periods=6000,freq='h'))
+        provider = LocalCandleProvider({'BTC/USDT':frame},'synthetic_6000')
+        provider.advance(frame.index[-1])
+        fetched = get_historical_data_for_backtest('BTC/USDT','1h',frame.index[0],frame.index[-1],provider)
+        self.assertEqual(len(fetched),6000)
+        self.strategies[0].set_indicators_config({})
+        self.strategies[0].set_entry_conditions([{'indicator':'close','operator':'>','value':1000,'side':'BUY'}])
+        result = backtest_technical_strategy(self.strategies[0],fetched,frame.index[0],frame.index[-1],10000)
+        self.assertEqual(result['coverage']['available_candles'],6000)
+        self.assertEqual(result['coverage']['evaluated_candles'],5999)
+
+    def test_replay_exports_owned_ordered_linked_decisions_stably(self):
+        from trading_stack.models import PaperDecision
+        result = self.runtime.replay(self.users[0].id,'2026-01-01','2026-01-01T04:00:00')
+        self.assertEqual(len(result['decisions']),result['decision_count'])
+        self.assertTrue(any(d['signal_id'] and d['execution_id'] for d in result['decisions']))
+        self.assertTrue(all(d['strategy_id']==self.strategies[0].id for d in result['decisions']))
+        client = self.app.test_client()
+        with client.session_transaction() as session:
+            session['_user_id'] = str(self.users[1].id)
+            session['_fresh'] = True
+        self.assertEqual(client.get('/api/paper/decisions').json,[])
+        before = json.dumps(result,sort_keys=True)
+        self.db.session.add(PaperDecision(run_id=result['run_id'],user_id=self.users[1].id,candle_time='foreign',trading_pair='BTC/USDT',status='foreign'))
+        self.db.session.commit()
+        self.assertEqual(json.dumps(self.runtime.replay(self.users[0].id,'2026-01-01','2026-01-01T04:00:00'),sort_keys=True),before)
+
+    def test_persisted_sell_protection_has_sell_direction(self):
+        from trading_stack.models import TradingSignal
+        self.strategies[0].set_entry_conditions([{'indicator':'sma','operator':'>','value':0,'side':'SELL'}])
+        self.runtime.replay(self.users[0].id,'2026-01-01','2026-01-01T04:00:00')
+        for row in TradingSignal.query.all():
+            self.assertGreater(row.stop_loss,row.entry_price)
+            self.assertLess(row.take_profit,row.entry_price)
+
+    def test_hostile_flags_do_not_load_implicit_models(self):
+        import builtins
+        from trading_stack.signal_generator import generate_ml_signal, ModelUnavailableError
+        from trading_stack.backtesting import backtest_ml_strategy
+        real_import = builtins.__import__
+        def guarded_import(name,*args,**kwargs):
+            if 'ml_models' in name:
+                raise AssertionError('implicit model module import attempted')
+            return real_import(name,*args,**kwargs)
+        with patch.dict(os.environ,{'TEAKA_MODE':'live'}),patch('builtins.__import__',guarded_import):
+            with self.assertRaises(ModelUnavailableError):
+                generate_ml_signal(self.strategies[0],'BTC/USDT',candles(),pending_signal_lookup=lambda *_:None)
+            with self.assertRaises(ModelUnavailableError):
+                backtest_ml_strategy(self.strategies[0],candles(),'2026-01-01','2026-01-02',10000)
+
+    def test_api_persists_legacy_exit_default_and_returns_invalid_contract_error(self):
+        client = self.app.test_client()
+        with client.session_transaction() as session:
+            session['_user_id'] = str(self.users[0].id)
+            session['_fresh'] = True
+        route = f'/api/strategies/{self.strategies[0].id}'
+        result = client.put(route,json={'exit_conditions':[{'indicator':'sma','operator':'>','value':100.5}]})
+        self.assertEqual(result.status_code,200)
+        self.assertEqual(client.get(route).json['exit_conditions'][0]['side'],'SELL')
+        self.strategies[0].set_exit_conditions([{'indicator':'missing','operator':'>','value':1}])
+        self.db.session.commit()
+        self.provider.advance('2026-01-01T04:00:00')
+        response = client.post('/api/backtests',json={'strategy_id':self.strategies[0].id,'trading_pair':'BTC/USDT','start_date':'2026-01-01','end_date':'2026-01-01T04:00:00'})
+        self.assertEqual(response.status_code,400)
+        self.assertIn('error',response.json)
+
+    def test_automatic_caps_broker_order_position_cash_and_keeps_manual_strict(self):
+        from paper_trading.paper_broker import PaperConfig
+        from trading_stack.paper_runtime import PaperRuntime
+        self.users[0].max_position_size_pct=100
+        self.strategies[0].risk_per_trade_pct=99
+        for config, cap in [(PaperConfig(max_order_notional=100,max_position_pct=1),100),
+                            (PaperConfig(max_order_notional=100000,max_position_pct=.01),100),
+                            (PaperConfig(max_order_notional=100000,max_position_pct=1,fee_bps=100,slippage_bps=100),10000/1.01)]:
+            runtime = PaperRuntime(self.provider,config)
+            quantity = runtime.automatic_quantity(self.users[0].id,self.strategies[0],100,98)
+            self.assertAlmostEqual(quantity*100*(1+config.slippage_bps/10000),cap)
+            self.provider.advance('2026-01-01')
+            filled = runtime.submit(self.users[0].id,'BTC/USDT','BUY',quantity,100,strategy=self.strategies[0],stop=98,take=150)
+            self.assertTrue(filled['success'],filled)
+            self.assertGreaterEqual(runtime.account(self.users[0].id).cash,-1e-8)
+        self.users[0].max_position_size_pct=5
+        runtime = PaperRuntime(self.provider,PaperConfig())
+        self.assertFalse(runtime.manual_order(self.users[0].id,'BTC/USDT','BUY',50)['success'])
+
+    def test_cli_custom_indicator_exports_unavailable_without_optional_imports(self):
+        import builtins
+        import io
+        from trading_stack.paper_replay import main
+        root = Path(os.environ['TEAKA_TEST_ARTIFACT_ROOT'])
+        source, definitions, output = root/'cli-custom.csv',root/'cli-custom-strategies.json',root/'cli-custom-result.json'
+        candles().rename_axis('timestamp').to_csv(source)
+        definitions.write_text(json.dumps([{'name':'Synthetic unsupported custom','risk_per_trade_pct':1,'stop_loss_pct':2,'take_profit_pct':4,'indicators_config':{'custom':{}},'entry_conditions':[{'indicator':'custom','operator':'>','value':0,'side':'BUY'}]}]),encoding='utf8')
+        real_import = builtins.__import__
+        def guarded_import(name,*args,**kwargs):
+            if 'matlab' in name or name == 'talib' or 'ml_models' in name:
+                raise AssertionError('optional import attempted by CLI')
+            return real_import(name,*args,**kwargs)
+        with patch.dict(os.environ,{'MATLAB_ENABLED':'true','TEAKA_MODE':'live'}),patch('builtins.__import__',guarded_import),patch('sys.stdout',io.StringIO()):
+            self.assertEqual(main(['--csv',str(source),'--strategies',str(definitions),'--pair','BTC/USDT','--timeframe','1h','--start','2026-01-01','--end','2026-01-01T04:00:00','--data-origin','synthetic_cli_custom','--output',str(output)]),0)
+        exported = json.loads(output.read_text())
+        self.assertEqual(exported['fill_count'],0)
+        self.assertTrue(all(d['status']=='unavailable' for d in exported['decisions']))
+        self.assertTrue(any('disabled' in d['reason'] for d in exported['decisions']))
+
+
 class FactoryBoundaryTests(unittest.TestCase):
     def test_sqlite_guard_rejects_persistent_database(self):
         with self.assertRaisesRegex(RuntimeError, "non-memory sqlite"):
