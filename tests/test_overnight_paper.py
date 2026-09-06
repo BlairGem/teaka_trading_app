@@ -38,6 +38,20 @@ class FakeClock:
 
 
 class OvernightTests(unittest.TestCase):
+    def test_kraken_empty_minutes_are_valid_but_never_fill(self):
+        runner = self.runner()
+        runner.process(payload(), BASE + 65)
+        data = payload(BASE + 60)
+        data['result']['XBTUSDT'][-2][1:] = ['102', '102', '102', '102', '0', '0', 0]
+        result = runner.process(data, BASE + 125)
+        self.assertEqual(result['fill_count'], 0)
+        self.assertEqual(result['event']['decision'], 'no_market_trades')
+        self.assertEqual(runner.last, BASE + 60)
+        invalid = payload(BASE + 120)
+        invalid['result']['XBTUSDT'][-2][5] = '0'
+        with self.assertRaises(DataError):
+            completed_candles(invalid, BASE + 185)
+
     def runner(self, **kwargs):
         root = Path(os.environ.get('TEAKA_TEST_ARTIFACT_ROOT',
                                   str(Path(__file__).resolve().parents[1] / 'paper_trading/state/test-artifacts')))

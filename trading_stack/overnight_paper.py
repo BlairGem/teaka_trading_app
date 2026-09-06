@@ -93,7 +93,8 @@ def completed_candles(payload, now):
             if not math.isfinite(stamp) or stamp <= 0 or stamp % 60 or any(not math.isfinite(v) for v in values):
                 raise DataError('nonfinite_or_unaligned_candle')
             op, hi, lo, close, vwap, volume, count = values
-            if min(op, hi, lo, close, vwap) <= 0 or volume < 0 or count < 0 or count != int(count) or not lo <= min(op, close) <= max(op, close) <= hi:
+            empty_minute = volume == 0 and count == 0 and op == hi == lo == close
+            if min(op, hi, lo, close) <= 0 or vwap < 0 or (vwap == 0 and not empty_minute) or volume < 0 or count < 0 or count != int(count) or not lo <= min(op, close) <= max(op, close) <= hi:
                 raise DataError('invalid_ohlc')
             bar = Candle(int(stamp), op, hi, lo, close, volume)
             if bars and bar.timestamp != bars[-1].timestamp + 60:
@@ -228,6 +229,9 @@ class OvernightPaper:
         if first:
             self.broker.mark(SYMBOL, bar.close)
             return self.snapshot('running', event=dict(event, decision='startup_warmup_no_order'))
+        if bar.volume == 0:
+            self.broker.mark(SYMBOL, bar.close)
+            return self.snapshot('running', event=dict(event, decision='no_market_trades'))
         position = self.broker.positions.get(SYMBOL)
         held = position.quantity if position else 0
         decision = 'hold_long' if held else 'hold_flat'
