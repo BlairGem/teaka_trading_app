@@ -94,8 +94,34 @@ async function positions() {
 }
 async function signalsAndTrades() {
   if (!byId('signals')) return;
-  const signals = await api('/api/signals');
-  table('signals', signals, [['Signal','id'],['Strategy','strategy_id'],['UTC time','timestamp'],['Pair','trading_pair'],['Side','signal_type'],['Status','status']], (cell,row) => {
+  const [signals, decisions] = await Promise.all([api('/api/signals'), api('/api/paper/decisions')]);
+  const explanations = {
+    shared_pair_exposure: 'A position in this pair was already held by this paper account. Another buy was blocked across its strategies.',
+    risk_per_trade_limit: 'The requested size exceeded the allowed risk per trade.',
+    max_open_positions: 'The account had reached its maximum number of open positions.',
+    user_position_limit: 'The requested position exceeded the account size limit.',
+    shared_risk_limits: 'The order did not pass the shared account risk limits.',
+    no_owned_position: 'This strategy had no owned position to sell.',
+    owned_held_quantity_required: 'A sell must reduce an owned position and stay within its held quantity.',
+    invalid_size: 'No valid positive order size was available within the configured limits.',
+    signal_entry: 'The signal entry filled.',
+    signal_exit: 'The signal exit filled.'
+  };
+  const linked = new Map();
+  for (const decision of decisions) {
+    if (decision.signal_id == null) continue;
+    if (!linked.has(decision.signal_id)) linked.set(decision.signal_id, []);
+    linked.get(decision.signal_id).push(decision);
+  }
+  const explained = signals.map(signal => {
+    const history = (linked.get(signal.id) || []).slice().sort((a,b) => a.id - b.id);
+    const latest = history[history.length - 1];
+    const reason = latest && latest.reason;
+    const explanation = reason ? `${explanations[reason] || 'Recorded decision reason'} (${reason})` :
+      signal.status === 'pending' ? 'Awaiting execution.' : 'No linked decision reason was recorded.';
+    return {...signal, decision_explanation: explanation, decision_history: history};
+  });
+  table('signals', explained, [['Signal','id'],['Strategy','strategy_id'],['UTC time','timestamp'],['Pair','trading_pair'],['Side','signal_type'],['Status','status'],['Reason','decision_explanation']], (cell,row) => {
     cell.append(button('Details', async () => { const pre = document.createElement('pre'); pre.textContent = pretty(row); cell.append(pre); }));
     if (row.status === 'pending') {
       const quantity = document.createElement('input'); quantity.type = 'number'; quantity.min = '0.000001'; quantity.step = 'any'; quantity.value = '0.1'; quantity.setAttribute('aria-label', `Quantity for signal ${row.id}`);
