@@ -130,6 +130,7 @@ def main() -> int:
         "tests.test_offline_guard",
         "tests.test_strategy_contracts",
         "tests.test_full_paper_integration",
+        "tests.test_paper_ui",
     ]
     suite = unittest.TestSuite(loader.loadTestsFromName(name) for name in test_names)
     print(f"Preserved test artifacts: {ARTIFACT_ROOT}")

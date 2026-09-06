@@ -1,0 +1,1 @@
+[{"name":"Synthetic SMA example","trading_pairs":["BTC/USDT"],"timeframe":"1h","is_active":true,"indicators_config":[{"id":"entry","type":"sma","parameters":{"period":1}}],"entry_conditions":[{"indicator":"sma_entry","operator":">","value":1,"side":"BUY"}],"exit_conditions":[],"risk_per_trade_pct":0.01,"stop_loss_pct":2,"take_profit_pct":50}]

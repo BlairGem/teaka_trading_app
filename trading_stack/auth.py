@@ -48,7 +48,7 @@ def login():
         else:
             return redirect(url_for('dashboard'))
     
-    return render_template('login.html')
+    return render_template('paper_auth.html', register=False)
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -95,7 +95,7 @@ def register():
             flash('An error occurred during registration', 'danger')
             return redirect(url_for('auth.register'))
     
-    return render_template('register.html')
+    return render_template('paper_auth.html', register=True)
 
 @bp.route('/logout')
 @login_required
@@ -108,66 +108,5 @@ def logout():
 @login_required
 def profile():
     if request.method == 'POST':
-        # Update API keys
-        current_user.binance_api_key = request.form.get('binance_api_key', '')
-        current_user.binance_api_secret = request.form.get('binance_api_secret', '')
-        current_user.oanda_api_key = request.form.get('oanda_api_key', '')
-        current_user.oanda_account_id = request.form.get('oanda_account_id', '')
-        
-        # Update notification settings
-        current_user.telegram_chat_id = request.form.get('telegram_chat_id', '')
-        current_user.discord_webhook_url = request.form.get('discord_webhook_url', '')
-        current_user.enable_email_notifications = 'enable_email_notifications' in request.form
-        current_user.enable_telegram_notifications = 'enable_telegram_notifications' in request.form
-        current_user.enable_discord_notifications = 'enable_discord_notifications' in request.form
-        
-        # Update risk management settings
-        def safe_float(value, default):
-            try:
-                result = float(value)
-                if not (result == result):  # Check for NaN
-                    return default
-                if result == float('inf') or result == float('-inf'):  # Check for infinity
-                    return default
-                return result
-            except (ValueError, TypeError):
-                return default
-        
-        try:
-            current_user.max_position_size_pct = safe_float(request.form.get('max_position_size_pct', 5.0), 5.0)
-            current_user.max_open_positions = int(request.form.get('max_open_positions', 10))
-            current_user.default_stop_loss_pct = safe_float(request.form.get('default_stop_loss_pct', 2.0), 2.0)
-            current_user.default_take_profit_pct = safe_float(request.form.get('default_take_profit_pct', 4.0), 4.0)
-        except ValueError:
-            flash('Invalid number format for risk management settings', 'danger')
-            return redirect(url_for('auth.profile'))
-        
-        # Change password if provided
-        current_password = request.form.get('current_password')
-        new_password = request.form.get('new_password')
-        confirm_password = request.form.get('confirm_password')
-        
-        if current_password and new_password:
-            if not current_user.check_password(current_password):
-                flash('Current password is incorrect', 'danger')
-                return redirect(url_for('auth.profile'))
-            
-            if new_password != confirm_password:
-                flash('New passwords do not match', 'danger')
-                return redirect(url_for('auth.profile'))
-            
-            current_user.set_password(new_password)
-            flash('Password updated successfully', 'success')
-        
-        # Save changes
-        try:
-            db.session.commit()
-            flash('Profile updated successfully', 'success')
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error updating user profile: {e}")
-            flash('An error occurred while updating profile', 'danger')
-        
-        return redirect(url_for('auth.profile'))
-    
-    return render_template('profile.html')
+        return render_template('paper_account.html', section='profile', error='Profile changes unavailable in this memory-only paper session'), 503
+    return render_template('paper_account.html', section='profile')

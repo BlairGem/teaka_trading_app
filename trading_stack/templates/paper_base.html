@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Teaka · Local paper session</title><link rel="stylesheet" href="{{ url_for('static', filename='css/paper.css') }}"></head>
+<body><header><a class="brand" href="{{ url_for('dashboard') }}">TEAKA <span>paper lab</span></a><span class="badge">Memory-only paper session</span></header>
+{% if current_user.is_authenticated %}<nav aria-label="Main navigation"><a href="/dashboard">Session</a><a href="/strategy-editor">Strategies</a><a href="/market-data">Candles</a><a href="/signals">Signals & fills</a><a href="/backtesting">Backtesting</a><a href="/settings">Settings</a><a href="/profile">Profile</a><a href="/auth/logout">Log out</a></nav>{% endif %}
+<main>{% with messages = get_flashed_messages() %}{% for item in messages %}<p role="status" class="notice">{{ item }}</p>{% endfor %}{% endwith %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}{% if message %}<p role="status" class="notice">{{ message }}</p>{% endif %}
+{% block content %}{% endblock %}</main><footer>Offline simulation · USDT accounting · No broker connection · Session state disappears when this process stops.</footer>{% block scripts %}{% endblock %}</body></html>

@@ -26,6 +26,15 @@ def init_app(app):
     def runtime():
         return current_app.extensions['paper_runtime']
 
+    @bp.route('/paper/status')
+    @login_required
+    def paper_status():
+        provider = runtime().provider
+        return jsonify(mode='paper', state='simulated' if provider.clock is not None else 'unavailable',
+                       data_origin=provider.data_origin, clock=provider.clock.isoformat() if provider.clock is not None else None,
+                       timeframe=provider.timeframe, currency='USDT', memory_only=True,
+                       fee_bps=runtime().config.fee_bps, slippage_bps=runtime().config.slippage_bps)
+
     @bp.errorhandler(ValueError)
     @bp.errorhandler(TypeError)
     @bp.errorhandler(KeyError)
@@ -158,9 +167,11 @@ def init_app(app):
     def backtest_result(backtest_id):
         return jsonify(serialize(BacktestResult.query.filter_by(id=backtest_id, user_id=current_user.id).first_or_404()))
 
-    @bp.route('/backtests', methods=['POST'])
+    @bp.route('/backtests', methods=['GET', 'POST'])
     @login_required
     def backtest():
+        if request.method == 'GET':
+            return jsonify([serialize(row) for row in BacktestResult.query.filter_by(user_id=current_user.id).order_by(BacktestResult.id.desc())])
         from ..backtesting import run_backtest
         from ..paper_runtime import timestamp
         data = request.get_json()
@@ -217,6 +228,7 @@ def init_app(app):
 
     for index, path in enumerate(['/ml-models', '/ml-models/<int:model_id>', '/ml-models/<int:model_id>/predict',
         '/matlab-signal', '/futures/order', '/websocket', '/strategies/<int:strategy_id>/optimize',
-        '/indicators', '/support-resistance', '/patterns']):
+        '/indicators', '/support-resistance', '/patterns', '/orderbook', '/market-trades',
+        '/signals/manual', '/signals/<int:signal_id>/cancel']):
         bp.add_url_rule(path, f'unavailable_{index}', unavailable, methods=['GET', 'POST'])
     app.register_blueprint(bp)
