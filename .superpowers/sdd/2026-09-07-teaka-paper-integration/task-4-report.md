@@ -149,3 +149,70 @@ CSV and the compact supported editor schema are offered. JSON result panels are
 functional evidence displays; there is no live chart/order book, fitted model,
 FX conversion, ML/MATLAB/futures/provider activation, persistence or account
 authentication. Live trading and unrestricted production readiness are not claimed.
+
+## Review fix round 1: preserve editor semantics and draft state
+
+Base: `e2e7352f5017a66b262e90a963c910f560288482`. Both Important findings in
+`task-4-review.md` were reproduced and fixed together. No backend runtime or
+accounting change was needed. The separately ledgered browser-cleanup Minor
+finding is outside this scoped fix and remains for final review.
+
+`editStrategy` now builds a candidate representation and validates every
+conversion before assigning any field. It checks timeframe, indicator/parameter
+schema, canonical indicator references, explicit sides/conflicts, exit SELL side
+and reference/operator, available select options and numeric control ranges.
+Price/close references, other timeframes and unrepresentable operators/exit rules
+refuse with the entire draft (including hidden ID) unchanged. Omitted SMA/EMA/RSI
+periods become the canonical 20/20/14, so name-only saves preserve calculations.
+Supported strategies are assigned in one final phase only after all checks pass.
+
+Behavioral regression coverage is in `tests/browser_paper_smoke.cjs`, using the
+actual launcher, API and browser DOM. Seven accepted API fixtures exercise entry
+price/close, equals/>=, exit price/BUY and custom MACD; actual Edit clicks must
+refuse and leave every named form field's value/check state unchanged. The 1h
+launcher cannot accept a 4h strategy, so that eighth case feeds the real DOM
+editor an otherwise accepted API row with timeframe 4h and verifies the same
+unchanged-form invariant. This case does not claim that the launched 1h API
+accepted the 4h variant. Three accepted keyed SMA/EMA/RSI fixtures with omitted
+periods are edited/renamed/saved through controls and fetched back from the API;
+their canonical periods, side, timeframe and empty exits remain correct.
+
+Exact commands, worktree cwd, PowerShell `login:false`:
+
+```powershell
+& 'C:/Users/Blair/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe' tests/browser_paper_smoke.cjs --editor-only
+& ./.venv-paper/Scripts/python.exe -I tests/run_offline.py tests.test_paper_ui
+& 'C:/Users/Blair/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe' tests/browser_paper_smoke.cjs
+```
+
+- Focused browser RED, first command at unmodified editor: exit 1, ten failures
+  reproduced both findings (entry price/close; equals/>= partial form mutation;
+  exit price/BUY; non-1h acceptance; SMA/EMA/RSI default1). Complete failures and
+  screenshot retained in `browser-40fadd8d-f5b0-4b73-ab3d-793c1c41cce2`.
+- Focused browser GREEN, same command after fix: exit 0, output
+  `Editor regression PASS: eight refused shapes leave every form field unchanged;
+  three default-period name edits preserve semantics.` Evidence:
+  `browser-ed1adce5-9ff9-479a-8086-a194d3985e02`.
+- Affected guarded UI GREEN: `Ran 6 tests in 2.552s`, `OK`, exit 0. Artifacts:
+  `run-f89dad5ec0ef4ef4851b0fe8f302fc51`. Existing guards unchanged.
+- Final full browser smoke GREEN: exit 0. Existing complete replay/manual-close/
+  backtest/settings/profile/error-state workflow plus new editor regressions
+  passed with zero page errors and zero editor regression failures.
+
+All artifact names above are under the absolute parent
+`D:\EV_AI\Worktrees\teaka-paper-integration-20260907\paper_trading\state\test-artifacts`.
+Final browser root is `browser-4f63971f-e269-4b6b-9fcf-f820f0353346`; it preserves
+`browser-results.json`, `launcher-output.txt`, all previous screenshots and new
+`05-editor-regressions.png` (inspected with view_image), the profile and browser
+artifact directories. The actual origin was `http://127.0.0.1:40391`; both owned
+processes stopped. Independent read-only `Get-NetTCPConnection -LocalPort 40391
+-State Listen` found zero remaining listeners, recorded in
+`shutdown-verification.json`. `git diff --check` passed. Narrow fix diff is saved
+as `task-4-fix1.diff` in the final browser evidence root.
+
+Self-review checked every field Save hardcodes against Edit's full preflight,
+including timeframe, indicator defaults/parameters, rule references, side,
+operator, exit side/reference, and all selected/numeric form controls. Refused
+edits never partially target an owned strategy; representable default-period
+renames preserve canonical calculation semantics. No deferred or hidden
+Important issue was identified in this fix's scope.

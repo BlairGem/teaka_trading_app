@@ -44,21 +44,47 @@ async function strategies() {
   if (select) { const selected = select.value; select.replaceChildren(); rows.forEach(row => { const option = document.createElement('option'); option.value = row.id; option.textContent = row.name; select.append(option); }); if (rows.some(row => String(row.id) === selected)) select.value = selected; }
 }
 function editStrategy(row) {
+  const refuse = () => { throw new Error('This strategy cannot be represented by the compact editor; use the JSON API. No changes were made.'); };
+  const form = byId('strategy-form'), f = form.elements;
   const config = row.indicators_config;
-  const entries = Array.isArray(config) ? config : Object.entries(config).map(([type, parameters]) => ({type, parameters}));
-  const rule = row.entry_conditions[0];
-  if (entries.length !== 1 || row.trading_pairs.length !== 1 || row.entry_conditions.length !== 1 || row.exit_conditions.length > 1 || !['sma','ema','rsi','macd'].includes(entries[0].type)) throw new Error('This strategy is outside the compact editor schema; edit its JSON through the documented API. No changes were made.');
-  const form = byId('strategy-form'), f = form.elements, indicator = entries[0];
-  if (indicator.type === 'macd' && ['fast_period','slow_period','signal_period'].some((key,index) => (indicator.parameters?.[key] ?? [12,26,9][index]) !== [12,26,9][index])) throw new Error('Custom MACD periods require the JSON API. No changes were made.');
-  if (row.exit_conditions.length && !['>','above'].includes(row.exit_conditions[0].operator)) throw new Error('This exit rule cannot be represented by the compact editor. No changes were made.');
-  f.id.value = row.id; f.name.value = row.name; f.pair.value = row.trading_pairs[0]; f.indicator.value = indicator.type;
-  f.period.value = indicator.parameters?.period || 1; f.side.value = rule.side || rule.signal_type;
-  f.operator.value = ({above: '>', below: '<'}[rule.operator] || rule.operator);
-  if (!f.operator.value) throw new Error('Unsupported editor operator. No changes were made.');
-  f.threshold.value = rule.value; f.exit_threshold.value = row.exit_conditions[0]?.value ?? '';
-  f.risk.value = row.risk_per_trade_pct; f.stop.value = row.stop_loss_pct; f.take.value = row.take_profit_pct; f.active.checked = row.is_active;
-  form.scrollIntoView({behavior: 'smooth'}); message(`Editing ${row.name}. Save applies changes to this strategy.`);
+  if (!config || typeof config !== 'object') return refuse();
+  const entries = Array.isArray(config) ? config : Object.entries(config).map(([type, parameters]) => ({id:type,type,parameters}));
+  if (row.timeframe !== '1h' || row.use_ml_model || entries.length !== 1 || row.trading_pairs.length !== 1 || row.entry_conditions.length !== 1 || row.exit_conditions.length > 1) return refuse();
+  const indicator = entries[0], type = indicator.type, params = indicator.parameters || {};
+  const defaults = {sma:20,ema:20,rsi:14};
+  if (!['sma','ema','rsi','macd'].includes(type)) return refuse();
+  const period = params.period ?? defaults[type] ?? 1;
+  const allowedParams = type === 'macd' ? ['fast_period','slow_period','signal_period'] : ['period'];
+  if (Object.keys(params).some(key => !allowedParams.includes(key))) return refuse();
+  if (type === 'macd' && allowedParams.some((key,index) => (params[key] ?? [12,26,9][index]) !== [12,26,9][index])) return refuse();
+  if (!Number.isInteger(period) || period <= 0) return refuse();
+  // Save uses this indicator for both rules. Price/close or a different
+  // reference cannot be represented and must never silently change on Save.
+  const references = new Set([type, type === 'macd' ? 'macd' : `${type}_${period}`]);
+  if (indicator.id != null) references.add(`${type}_${indicator.id}`);
+  const side = (rule, fallback) => String(rule.signal_type ?? rule.side ?? fallback ?? '').toUpperCase();
+  const validRule = (rule, fallback) => references.has(rule.indicator) && typeof rule.value === 'number' && Number.isFinite(rule.value)
+    && ['BUY','SELL'].includes(side(rule,fallback))
+    && !(rule.side != null && rule.signal_type != null && String(rule.side).toUpperCase() !== String(rule.signal_type).toUpperCase());
+  const rule = row.entry_conditions[0], exit = row.exit_conditions[0];
+  if (!validRule(rule) || (exit && (!validRule(exit,'SELL') || side(exit,'SELL') !== 'SELL' || !['>','above'].includes(exit.operator)))) return refuse();
+  const values = {id:row.id,name:row.name,pair:row.trading_pairs[0],indicator:type,period,
+    side:side(rule),operator:({above:'>',below:'<'}[rule.operator] || rule.operator),threshold:rule.value,
+    exit_threshold:exit?.value ?? '',risk:row.risk_per_trade_pct,stop:row.stop_loss_pct,take:row.take_profit_pct};
+  // Complete validation uses the actual controls before touching any field,
+  // including hidden ID. A refused edit leaves the user's entire draft intact.
+  for (const [name,value] of Object.entries(values)) {
+    const field = f.namedItem(name);
+    if (field.tagName === 'SELECT' && ![...field.options].some(option => option.value === String(value))) return refuse();
+    if (field.type === 'number' && value !== '') {
+      if (typeof value !== 'number' || !Number.isFinite(value) || (field.min !== '' && value < Number(field.min)) || (field.max !== '' && value > Number(field.max))) return refuse();
+    }
+  }
+  for (const [name,value] of Object.entries(values)) f.namedItem(name).value = value;
+  f.active.checked = row.is_active;
+  form.scrollIntoView({behavior:'smooth'}); message(`Editing ${row.name}. Save applies changes to this strategy.`);
 }
+
 async function positions() {
   if (!byId('positions')) return;
   const result = await api('/api/positions');

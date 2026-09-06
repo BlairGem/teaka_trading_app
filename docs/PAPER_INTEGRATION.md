@@ -72,6 +72,11 @@ editor is 1h. Custom strategy JSON may be submitted to owned `/api/strategies`
 POST/PUT using the canonical contract. Ambiguous duplicate indicator types reject.
 The compact editor refuses multi-indicator/multi-pair or other unrepresentable
 strategies rather than replacing them with its smaller schema.
+It validates the entire definition before populating any form field. Unsupported
+timeframes/operators, price/close references and incompatible exit references or
+sides leave the current draft, including its hidden strategy ID, untouched.
+Stored SMA/EMA/RSI configurations with omitted periods use the canonical defaults
+20/20/14 when edited; a name-only save preserves those calculation semantics.
 
 One process owns one dataset and a monotonic shared clock. A different dataset
 after any replay activity, or historical rewind, requires a fresh process. An

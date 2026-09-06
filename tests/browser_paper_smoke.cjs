@@ -14,6 +14,63 @@ console.log(`Preserved browser evidence: ${artifacts}`);
 let context, server, output = '', origin;
 const results = {mode:'paper', data_origin:'synthetic_ui_fixture', actions:[], errors:[], blocked:[]};
 const step = text => { results.actions.push(text); console.log(text); };
+async function editorRegression(page) {
+  const baseline = await page.evaluate(async () => (await (await fetch('/api/strategies')).json())[0]);
+  const failures = [];
+  const snapshot = () => page.locator('#strategy-form').evaluate(form => [...form.elements].filter(field => field.name).map(field => ({name:field.name,value:field.value,checked:field.checked})));
+  const saveFixture = async changes => page.evaluate(async ({base,changes}) => {
+    const data = {...base, ...changes, is_active:false}; delete data.id;
+    const response = await fetch('/api/strategies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const result = await response.json(); if (!response.ok) throw new Error(result.error);
+    return (await fetch(`/api/strategies/${result.strategy_id}`)).json();
+  }, {base:baseline,changes});
+  const cases = [
+    ['entry price', {entry_conditions:[{indicator:'price',operator:'>',value:2,side:'BUY'}]}],
+    ['entry close', {entry_conditions:[{indicator:'close',operator:'>',value:2,side:'BUY'}]}],
+    ['equals', {entry_conditions:[{indicator:'sma',operator:'equals',value:2,side:'BUY'}]}],
+    ['above or equal', {entry_conditions:[{indicator:'sma',operator:'>=',value:2,side:'BUY'}]}],
+    ['exit price', {exit_conditions:[{indicator:'price',operator:'>',value:2,side:'SELL'}]}],
+    ['exit BUY', {exit_conditions:[{indicator:'sma',operator:'>',value:2,side:'BUY'}]}],
+    ['custom MACD', {indicators_config:{macd:{fast_period:5}},entry_conditions:[{indicator:'macd',operator:'>',value:2,side:'BUY'}],exit_conditions:[]}],
+  ];
+  for (const [name, changes] of cases) {
+    const row = await saveFixture({name:`Editor rejection ${name}`,...changes});
+    await page.getByRole('button',{name:'Refresh session',exact:true}).click();
+    await page.waitForFunction(name => [...document.querySelectorAll('#strategies tbody tr')].some(row => row.textContent.includes(name)),row.name);
+    // Retain a deliberately non-default unsaved form to expose partial writes.
+    await page.locator('#strategy-form [name=name]').fill('Unsaved local draft');
+    await page.locator('#strategy-form [name=threshold]').fill('777');
+    const before = await snapshot();
+    await page.locator('#strategies tbody tr').filter({hasText:row.name}).getByRole('button',{name:'Edit',exact:true}).click();
+    await page.waitForTimeout(50);
+    try { assert.match(await page.locator('#action-status').innerText(),/No changes were made/); assert.deepEqual(await snapshot(),before); }
+    catch (error) { failures.push(`${name}: ${error.message}`); }
+  }
+  // The launcher uses 1h. Feed the real DOM editor an otherwise accepted row
+  // carrying 4h to verify it refuses instead of silently forcing the save to 1h.
+  const beforeTimeframe = await snapshot();
+  const timeframeError = await page.evaluate(row => {try {editStrategy({...row,timeframe:'4h'});return null;} catch(error) {return error.message;}},baseline);
+  try { assert.match(timeframeError || '',/No changes were made/); assert.deepEqual(await snapshot(),beforeTimeframe); }
+  catch(error) { failures.push(`non-1h timeframe: ${error.message}`); }
+  for (const [type,period] of [['sma',20],['ema',20],['rsi',14]]) {
+    const row = await saveFixture({name:`Default ${type}`,indicators_config:{[type]:{}},entry_conditions:[{indicator:type,operator:'>',value:1,side:'BUY'}],exit_conditions:[]});
+    await page.getByRole('button',{name:'Refresh session',exact:true}).click();
+    await page.waitForFunction(name => [...document.querySelectorAll('#strategies tbody tr')].some(row => row.textContent.includes(name)),row.name);
+    await page.locator('#strategies tbody tr').filter({hasText:row.name}).getByRole('button',{name:'Edit',exact:true}).click();
+    try { assert.equal(await page.locator('#strategy-form [name=period]').inputValue(),String(period)); }
+    catch(error) { failures.push(`default ${type}: ${error.message}`); continue; }
+    await page.locator('#strategy-form [name=name]').fill(`${row.name} renamed`);
+    await page.getByRole('button',{name:'Save strategy',exact:true}).click();
+    await page.waitForFunction(() => document.querySelector('#action-status').textContent.includes('Strategy saved'));
+    const saved = await page.evaluate(async id => (await fetch(`/api/strategies/${id}`)).json(),row.id);
+    try { assert.equal(saved.indicators_config[0].parameters.period,period); assert.equal(saved.entry_conditions[0].side,'BUY'); assert.equal(saved.timeframe,'1h'); assert.deepEqual(saved.exit_conditions,[]); }
+    catch(error) { failures.push(`round-trip ${type}: ${error.message}`); }
+  }
+  results.editorRegressions = {rejectedCases:cases.length + 1,defaultRoundTrips:3,failures};
+  await page.screenshot({path:path.join(artifacts,'05-editor-regressions.png'),fullPage:true});
+  assert.deepEqual(failures,[]);
+  step('Editor regression PASS: eight refused shapes leave every form field unchanged; three default-period name edits preserve semantics.');
+}
 async function main() {
   server = spawn(path.join(root, '.venv-paper/Scripts/python.exe'), ['-B','-m','trading_stack.paper_server','--data-root',path.join(root,'tests/fixtures/paper-session'),'--output-root',artifacts,'--port','0'], {cwd:root, windowsHide:true, env:{...process.env, PYTHONDONTWRITEBYTECODE:'1',TEAKA_MODE:'paper'}});
   server.stdout.on('data', data => { output += data.toString(); });
@@ -52,6 +109,7 @@ async function main() {
   await page.getByRole('button',{name:'Save strategy',exact:true}).click();
   await page.waitForFunction(() => document.querySelectorAll('#strategies tbody tr').length === 2);
   step('Created BUY strategy with explicit SELL exit and second SELL-only strategy using rendered editor.');
+  if (process.argv.includes('--editor-only')) { await editorRegression(page); results.success = true; return; }
   await page.locator('summary').click();
   await page.screenshot({path:path.join(artifacts,'01-ready-to-replay.png'),fullPage:true});
   await page.getByRole('button',{name:'Run finite replay',exact:true}).click();
@@ -95,6 +153,7 @@ async function main() {
   // A blocked own-origin API request must visibly mark any retained values stale.
   await page.getByRole('link',{name:'Session',exact:true}).click();
   await page.waitForFunction(() => document.querySelector('#cash').textContent.includes('USDT'));
+  await editorRegression(page);
   await page.route('**/api/paper/status', route => route.abort());
   await page.getByRole('button',{name:'Refresh session',exact:true}).click();
   await page.waitForFunction(() => document.querySelector('#data-state').textContent.includes('may be stale'));
