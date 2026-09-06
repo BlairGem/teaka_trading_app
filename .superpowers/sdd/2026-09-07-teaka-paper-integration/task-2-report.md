@@ -2,11 +2,25 @@
 
 ## Evidence
 
+- Implementation commit: `894d00ff196459ffdd997008b0322233af0eaf4e` (`Repair strategy and backtest contracts`).
 - Baseline: `D:\EV_AI\Worktrees\teaka-paper-integration-20260907\.venv-paper\Scripts\python.exe -I D:\EV_AI\Worktrees\teaka-paper-integration-20260907\tests\run_offline.py` -> 21 tests, OK, before Task 2 edits.
 - RED used the same guarded runner with focused unittest names. Regressions reproduced: sizing returned `0.5` instead of `50`; strategy contract module absent; eager TA-Lib/model/config imports failed; paper market wrappers lacked provider/as-of/date injection; risk helpers were absent; technical replay used the signal candle close; no-loss profit factor was infinite; ML replay included its execution candle, opened a short, and returned timestamp objects; symbolic backtest `>` evaluated false; explicit zero user limits were replaced by defaults.
 - GREEN focused: `D:\EV_AI\Worktrees\teaka-paper-integration-20260907\.venv-paper\Scripts\python.exe -I D:\EV_AI\Worktrees\teaka-paper-integration-20260907\tests\run_offline.py tests.test_strategy_contracts` -> 33 tests, OK. Artifacts: `paper_trading/state/test-artifacts/run-dbc899928e15400d9602e1713392222a`.
 - GREEN complete: `D:\EV_AI\Worktrees\teaka-paper-integration-20260907\.venv-paper\Scripts\python.exe -I D:\EV_AI\Worktrees\teaka-paper-integration-20260907\tests\run_offline.py` -> 54 tests, OK. Artifacts: `paper_trading/state/test-artifacts/run-49a5f7f5de9c484695be6aeb6c4ce1b8`.
 - The runner installs its audit guard before project imports and now accepts test names. Approved NumPy/Pandas are preloaded because the Windows Pandas import asks for the hostname; network, process, delete, move, link, metadata, and out-of-artifact writes remain denied.
+
+### Observed RED/GREEN output
+
+- RED command: `$env:TEAKA_MODE='paper'; & 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\.venv-paper\Scripts\python.exe' -I 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\tests\run_offline.py' tests.test_strategy_contracts.BacktestContractTests.test_ml_backtest_uses_completed_candles_and_does_not_open_shorts`
+  Observed: `... FAIL`; the result contained one `SELL` trade; `Ran 1 test in 0.027s`; `FAILED (failures=1)`; `exit=1`.
+- RED command: `$env:TEAKA_MODE='paper'; & 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\.venv-paper\Scripts\python.exe' -I 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\tests\run_offline.py' tests.test_strategy_contracts.BacktestContractTests.test_ml_backtest_serializes_trade_timestamps tests.test_strategy_contracts.BacktestContractTests.test_backtest_condition_accepts_symbolic_operator_and_fails_closed`
+  Observed: timestamp assertion received `Timestamp(...)` instead of the expected ISO string; `Unsupported operator >`; `Ran 2 tests in 0.023s`; `FAILED (failures=2)`; `exit=1`.
+- RED command: `$env:TEAKA_MODE='paper'; & 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\.venv-paper\Scripts\python.exe' -I 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\tests\run_offline.py' tests.test_strategy_contracts.RiskLimitContractTests.test_explicit_zero_user_limits_are_not_replaced_by_defaults tests.test_strategy_contracts.BacktestContractTests.test_ml_backtest_serializes_trade_timestamps tests.test_strategy_contracts.BacktestContractTests.test_performance_metrics_are_finite_when_there_are_no_losses`
+  Observed: explicit zero limits returned `True`, result metadata raised `KeyError: 'data_origin'`, and empty profit factor was `0.0` instead of `None`; `Ran 3 tests in 0.025s`; `FAILED (failures=2, errors=1)`; `exit=1`.
+- Focused GREEN command: `$env:TEAKA_MODE='paper'; & 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\.venv-paper\Scripts\python.exe' -I 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\tests\run_offline.py' tests.test_strategy_contracts`
+  Observed: `Ran 33 tests in 0.129s`; `OK`; `exit=0`.
+- Complete GREEN command: `$env:TEAKA_MODE='paper'; & 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\.venv-paper\Scripts\python.exe' -I 'D:\EV_AI\Worktrees\teaka-paper-integration-20260907\tests\run_offline.py'`
+  Observed: `Ran 54 tests in 1.244s`; `OK`; `exit=0`.
 
 ## Task 3 interfaces
 
