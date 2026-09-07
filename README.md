@@ -1,12 +1,12 @@
 # BTC/USDT PAPER practice
 
-**Status: Running**
+**Status: Completed**
 
-- Published UTC: 2026-09-07T00:01:18+00:00
-- Worker snapshot observed UTC: 2026-09-07T00:00:56+00:00
-- Last processed candle start UTC: 2026-09-06T23:59:00+00:00
+- Published UTC: 2026-09-07T00:02:18+00:00
+- Worker snapshot observed UTC: 2026-09-07T00:01:53+00:00
+- Last processed candle start UTC: 2026-09-07T00:00:00+00:00
 - Run deadline UTC: 2026-09-07T00:01:54+00:00
-- Next local check UTC: 2026-09-07T00:01:48+00:00
+- Next local check UTC: No further scheduled updates
 
 | Virtual metric | USDT |
 |---|---:|
@@ -18,9 +18,9 @@
 | Cash | 9997.3492 |
 | Fees charged | 1.9991 |
 
-Paper decisions: **480**. Simulated fills: **40**.
+Paper decisions: **481**. Simulated fills: **40**.
 
-Latest simulated mark: **80349.6000 USDT**. This is not a live tick.
+Latest simulated mark: **80251.3000 USDT**. This is not a live tick.
 
 Real public Kraken one-minute candles; simulated paper execution only. Unvalidated 20-period SMA practice strategy, long-only, with a 50 USDT entry cap.
 
@@ -29,4 +29,4 @@ Signals use the prior completed candle. Fills simulate the following candle open
 Held exposure remains marked at the last valid candle when the run stops; no artificial liquidation. If the published timestamp stops advancing, treat this page as stale.
 New meaningful one-minute snapshots normally publish at most once per minute; unchanged checks are skipped. GitHub caching may delay visibility. Another chat or reader must poll the stable status URL for updates.
 
-Snapshot generation: `37463458b135466983020dd639607832`
+Snapshot generation: `cd4d7e5187c642edaa452085b00584bb`
