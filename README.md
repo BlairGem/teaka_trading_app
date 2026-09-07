@@ -198,6 +198,36 @@ PRIVATE_EXCHANGE_API_ENABLED=false
 
 ---
 
+## Cloud Agent development environment
+
+The dashboard-managed Cursor Cloud Agent environment for this repo boots from a
+prebuilt snapshot and prepares the paper-safe surfaces automatically:
+
+- **install:** `python3 -m pip install --user -r requirements.txt`
+  (installs Flask, the bridge's only runtime dependency, into the user site).
+- **start:** `python3 connect_python.py`
+  (runs the paper-safe bridge on `0.0.0.0:5050`; live orders stay disabled).
+
+`requirements.txt` reaches PyPI, so `pypi.org` and `files.pythonhosted.org` must
+be in the environment's egress allowlist.
+
+To reproduce the same setup locally, run the equivalent helper scripts:
+
+```bash
+bash scripts/cloud_agent_install.sh   # install deps
+bash scripts/cloud_agent_start.sh     # start the paper-safe bridge
+```
+
+The paper-trading path uses only the Python standard library and needs no
+install:
+
+```bash
+python3 -m unittest discover -s paper_trading -v
+python3 paper_trading/run_paper.py --ticks paper_trading/sample_ticks.csv
+```
+
+---
+
 ## Security
 
 - Rotate any exchange / Telegram / mail credentials that ever appeared in Git history.
