@@ -37,6 +37,11 @@
       "role": "Postgres GEMBot memory API, 14-tool EV<->Cursor MCP server, Ghost circle bridges",
       "status": "MCP_MEMORY_LAYER"
     },
+    "memory_layer": {
+      "path": "C:\\EV_AI\\Cursor\\Memory\\EV_MEMORY.json",
+      "status": "ACTIVE_SYSTEM_MEMORY",
+      "description": "True EV terminal and operator memory file loaded on boot"
+    },
     "app_and_execution_layer": {
       "repo": "BlairGem1234/teaka_trading_app",
       "url": "https://github.com/BlairGem1234/teaka_trading_app.git",

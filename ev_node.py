@@ -19,7 +19,13 @@ import urllib.error
 @dataclass(frozen=True)
 class EVNodeConfig:
     rpc_url: str = "http://127.0.0.1:26657"
-    brain_path: str = "ev_virtual_brain.json"
+    brain_path: str = "C:/EV_AI/Cursor/Memory/EV_MEMORY.json"
+    fallback_brain_paths: tuple[str, ...] = (
+        "C:/EV_AI/Cursor/Memory/EV_MEMORY.json",
+        "E:/EV_Files/ev_virtual_brain.json",
+        "D:/EV_Files/ev_virtual_brain.json",
+        "ev_virtual_brain.json",
+    )
     timeout_seconds: float = 3.0
     mock_mode: bool = False
     chain_id: str = "ev-stack-main-1"
@@ -77,39 +83,45 @@ class EVNodeClient:
             }
 
     def load_virtual_brain(self, custom_path: Optional[str] = None) -> dict:
-        """Load and parse the EV Virtual Brain specification."""
-        path_str = custom_path or self.config.brain_path
-        path = Path(path_str)
-        if not path.is_file():
-            # Try looking relative to workspace or repository root
-            candidate = Path(__file__).resolve().parent / path_str
-            if candidate.is_file():
-                path = candidate
-            else:
+        """Load and parse the active EV Memory / Virtual Brain specification."""
+        paths_to_try = [custom_path] if custom_path else [self.config.brain_path, *self.config.fallback_brain_paths]
+
+        for p_str in paths_to_try:
+            if not p_str:
+                continue
+            path = Path(p_str)
+            if not path.is_file():
+                candidate = Path(__file__).resolve().parent / p_str
+                if candidate.is_file():
+                    path = candidate
+                else:
+                    continue
+
+            try:
+                with path.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self._brain_cache = data
+                    return data
+            except Exception as err:
                 return {
-                    "error": f"Brain file not found at {path_str}",
+                    "error": f"Failed to parse brain file at {path}: {err}",
                     "linked": False,
-                    "ev_identity": "EV Virtual Brain (Offline)",
+                    "ev_identity": "EV Virtual Brain (Corrupted)",
                 }
 
-        try:
-            with path.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-                self._brain_cache = data
-                return data
-        except Exception as err:
-            return {
-                "error": f"Failed to parse brain file: {err}",
-                "linked": False,
-                "ev_identity": "EV Virtual Brain (Corrupted)",
-            }
+        return {
+            "error": "No brain/memory file found across configured paths",
+            "linked": False,
+            "ev_identity": "EV Virtual Brain (Offline)",
+        }
 
     def verify_brain_link(self) -> dict:
-        """Verify the health and linkage of EV Virtual Brain."""
+        """Verify the health and linkage of EV Virtual Brain / EV Memory."""
         brain = self.load_virtual_brain()
-        is_linked = brain.get("linked", False)
-        phase = brain.get("phase", "Unknown")
-        identity = brain.get("ev_identity", "EV Cloud Core")
+        # Support both ev_virtual_brain.json and EV_MEMORY.json schemas
+        is_linked = brain.get("linked", False) or "error" not in brain
+        phase = brain.get("phase", brain.get("version", "Active"))
+        identity = brain.get("ev_identity", brain.get("system", "EV Cloud Core / Memory"))
         runtime = brain.get("runtime", {})
 
         return {
