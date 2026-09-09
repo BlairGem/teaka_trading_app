@@ -17,7 +17,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$TeakaPath = $PSScriptRoot,
+    [string]$TeakaPath = $(if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }),
     [switch]$RunPaperTests = $false
 )
 
@@ -37,11 +37,13 @@ Write-Host ""
 Write-Host "🔍 [1/7] Checking Drive & Repository Paths..." -ForegroundColor Yellow
 
 $knownPaths = @(
-    @{ Name = "TeAka (Current / Script Root)"; Path = (Resolve-Path $TeakaPath).Path },
+    @{ Name = "TeAka (Current)"; Path = $TeakaPath },
     @{ Name = "TeAka on E: Drive"; Path = "E:\EV_Files\teaka_trading_app" },
+    @{ Name = "TeAka on C: Drive"; Path = "C:\EV_AI\teaka_trading_app" },
     @{ Name = "EV Virtual Brain (E:)"; Path = "E:\EV_Files\ev_virtual_brain.json" },
     @{ Name = "EV Virtual Brain (D:)"; Path = "D:\EV_Files\ev_virtual_brain.json" },
     @{ Name = "EV Virtual Brain (Local)"; Path = Join-Path $TeakaPath "ev_virtual_brain.json" },
+    @{ Name = "EV Memory JSON"; Path = "C:\EV_AI\Cursor\Memory\EV_MEMORY.json" },
     @{ Name = "Ev Main Repo (C:)"; Path = "C:\Users\$env:USERNAME\EV_Git\Ev" },
     @{ Name = "GEMBot29 Repo (C:)"; Path = "C:\Users\$env:USERNAME\EV_Git\GEMBot29" },
     @{ Name = "GPT_AI_Workspace (C:)"; Path = "C:\Users\$env:USERNAME\EV_Git\GPT_AI_Workspace" },
@@ -66,6 +68,7 @@ Write-Host "`n🔍 [2/7] Checking EV Virtual Brain Integrity..." -ForegroundColo
 $brainCandidates = @(
     "E:\EV_Files\ev_virtual_brain.json",
     "D:\EV_Files\ev_virtual_brain.json",
+    "C:\EV_AI\Cursor\Memory\EV_MEMORY.json",
     (Join-Path $TeakaPath "ev_virtual_brain.json")
 )
 
@@ -74,11 +77,11 @@ foreach ($bPath in $brainCandidates) {
     if (Test-Path $bPath) {
         try {
             $brainContent = Get-Content $bPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            Write-Host "  ✅ Brain File Valid at: $bPath" -ForegroundColor Green
-            Write-Host "     Identity : $($brainContent.ev_identity)" -ForegroundColor Cyan
-            Write-Host "     Phase    : $($brainContent.phase)" -ForegroundColor Cyan
-            Write-Host "     Linked   : $($brainContent.linked)" -ForegroundColor Cyan
-            Write-Host "     Token    : $($brainContent.token)" -ForegroundColor Cyan
+            Write-Host "  ✅ Brain / Memory File Valid at: $bPath" -ForegroundColor Green
+            if ($brainContent.ev_identity) { Write-Host "     Identity : $($brainContent.ev_identity)" -ForegroundColor Cyan }
+            if ($brainContent.phase)       { Write-Host "     Phase    : $($brainContent.phase)" -ForegroundColor Cyan }
+            if ($null -ne $brainContent.linked) { Write-Host "     Linked   : $($brainContent.linked)" -ForegroundColor Cyan }
+            if ($brainContent.token)       { Write-Host "     Token    : $($brainContent.token)" -ForegroundColor Cyan }
             $brainFound = $true
             break
         } catch {
@@ -155,6 +158,7 @@ $portsToCheck = @(
     @{ Port = 5050; Service = "EV Remote Server / TeAka Flask" },
     @{ Port = 5051; Service = "EV Alert API (Telegram)" },
     @{ Port = 5056; Service = "GEMBot Qwen Flask Gateway" },
+    @{ Port = 8080; Service = "EV Command Service" },
     @{ Port = 8081; Service = "EVBot Auto-Bind Port" },
     @{ Port = 11434; Service = "Ollama Local API" },
     @{ Port = 26657; Service = "EV Node / CometBFT RPC" }
@@ -201,13 +205,19 @@ try {
     Write-Host "  ⚪ EV Remote Server not responding at http://127.0.0.1:5050/ev_remote/command" -ForegroundColor DarkGray
 }
 
-# C. GEMBot Qwen check
-try {
-    $qwenResp = Invoke-RestMethod -Uri "http://127.0.0.1:5056/api/qwen" -Method GET -TimeoutSec 2 -ErrorAction Stop
-    Write-Host "  ✅ GEMBot Qwen API responding at :5056" -ForegroundColor Green
-} catch {
-    Write-Host "  ⚪ GEMBot Qwen API not responding at http://127.0.0.1:5056" -ForegroundColor DarkGray
-}
+    # C. GEMBot Qwen check
+    try {
+        $qwenResp = Invoke-RestMethod -Uri "http://127.0.0.1:5056/api/qwen" -Method GET -TimeoutSec 2 -ErrorAction Stop
+        Write-Host "  ✅ GEMBot Qwen API responding at :5056" -ForegroundColor Green
+    } catch {
+        # Port 5056 is open; check if root or alternate method responds
+        try {
+            $raw5056 = Invoke-WebRequest -Uri "http://127.0.0.1:5056/" -Method GET -TimeoutSec 2 -ErrorAction Stop
+            Write-Host "  ✅ GEMBot Qwen Service responding at :5056 (HTTP $($raw5056.StatusCode))" -ForegroundColor Green
+        } catch {
+            Write-Host "  ⚪ GEMBot Qwen port :5056 open, endpoint check: $($_.Exception.Message)" -ForegroundColor DarkGray
+        }
+    }
 
 # -------------------------------------------------------------
 # 7. Paper Trading Test Verification (Optional / If requested)
