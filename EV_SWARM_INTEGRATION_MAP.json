@@ -50,12 +50,18 @@
       "status": "APP_EXECUTION_LAYER"
     }
   },
-  "swarm_endpoints": {
-    "gembot_qwen_flask": "http://127.0.0.1:5056/api/qwen",
-    "ev_ollama_bridge": "http://127.0.0.1:11434/api/generate",
-    "ev_remote_server": "http://127.0.0.1:5050/ev_remote/command",
-    "ev_node_rpc": "http://127.0.0.1:26657"
-  },
+    "swarm_endpoints": {
+      "gembot_qwen_flask": "http://127.0.0.1:5056/api/qwen",
+      "ev_ollama_bridge": "http://127.0.0.1:11434/api/generate",
+      "ev_remote_server": "http://127.0.0.1:5050/ev_remote/command",
+      "ev_node_rpc": "http://127.0.0.1:26657"
+    },
+    "ollama_models": {
+      "active_default": "qwen2.5:3b",
+      "fallback_candidates": ["qwen2.5:3b", "qwen3:4b", "phi4-mini:3.8b"],
+      "heavy_30b_model": "qwen3-coder:30b",
+      "heavy_30b_status": "DISABLED_ON_THIS_PC"
+    },
   "paper_trading_integration": {
     "broker": "paper_trading.paper_broker.PaperBroker",
     "swarm_adapter": "paper_trading.ev_swarm_adapter.EVSwarmSignalAdapter",

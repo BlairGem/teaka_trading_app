@@ -23,6 +23,7 @@ class EVSwarmAdapterTests(unittest.TestCase):
             node_client=self.node_client,
             min_confidence=0.60,
             default_order_cap_usdt=50.0,
+            qwen_model="qwen2.5:3b",
         )
 
     def test_ev_node_client_status_and_brain(self) -> None:
@@ -61,7 +62,7 @@ class EVSwarmAdapterTests(unittest.TestCase):
             signal="BUY",
             confidence=0.90,
             reason="Qwen 30B breakout confirmation",
-            source="qwen_30b",
+            source="qwen_model",
             metadata={},
         )
         fill_buy = self.adapter.evaluate_and_execute("BTC-USDT", 80_000.0, buy_dec)
@@ -78,7 +79,7 @@ class EVSwarmAdapterTests(unittest.TestCase):
         self.assertEqual(len(self.adapter.audit_log), 1)
         receipt = self.adapter.audit_log[0]
         self.assertIn("receipt_hash", receipt)
-        self.assertEqual(receipt["source"], "qwen_30b")
+        self.assertEqual(receipt["source"], "qwen_model")
 
         # Low confidence signal should be ignored
         low_conf = SwarmDecision(signal="SELL", confidence=0.4, reason="low", source="qwen", metadata={})

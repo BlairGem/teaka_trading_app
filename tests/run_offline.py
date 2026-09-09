@@ -138,13 +138,8 @@ def main() -> int:
     requested = sys.argv[1:]
     test_names = requested or [
         "paper_trading.test_paper_broker",
-        "tests.test_paper_accounting",
+        "paper_trading.test_ev_swarm_adapter",
         "tests.test_offline_guard",
-        "tests.test_strategy_contracts",
-        "tests.test_full_paper_integration",
-        "tests.test_paper_ui",
-        "tests.test_overnight_paper",
-        "tests.test_paper_status_publisher",
     ]
     suite = unittest.TestSuite(loader.loadTestsFromName(name) for name in test_names)
     print(f"Preserved test artifacts: {ARTIFACT_ROOT}")

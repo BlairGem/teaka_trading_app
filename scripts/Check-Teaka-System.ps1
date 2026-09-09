@@ -18,7 +18,8 @@
 [CmdletBinding()]
 param(
     [string]$TeakaPath = $(if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }),
-    [switch]$RunPaperTests = $false
+    [switch]$RunPaperTests = $false,
+    [switch]$CheckOnly = $false
 )
 
 $ErrorActionPreference = "Continue"
@@ -29,6 +30,9 @@ Write-Host "=================================================================" -
 Write-Host "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz')" -ForegroundColor DarkGray
 Write-Host "Computer : $env:COMPUTERNAME" -ForegroundColor DarkGray
 Write-Host "User     : $env:USERNAME" -ForegroundColor DarkGray
+if ($CheckOnly) {
+    Write-Host "Mode     : READ-ONLY AUDIT (CheckOnly mode)" -ForegroundColor Magenta
+}
 Write-Host ""
 
 # -------------------------------------------------------------
@@ -181,12 +185,20 @@ foreach ($p in $portsToCheck) {
 # -------------------------------------------------------------
 Write-Host "`n🔍 [6/7] Probing Local Service Endpoints..." -ForegroundColor Yellow
 
-# A. Ollama check
+# A. Ollama check & model listing
 try {
-    $ollamaTags = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/tags" -Method GET -TimeoutSec 2 -ErrorAction Stop
-    $modelNames = ($ollamaTags.models | ForEach-Object { $_.name }) -join ", "
-    Write-Host "  ✅ Ollama API responding at :11434" -ForegroundColor Green
-    Write-Host "     Loaded models: $modelNames" -ForegroundColor Cyan
+    $ollamaTags = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/tags" -Method GET -TimeoutSec 3 -ErrorAction Stop
+    $modelList = $ollamaTags.models
+    if ($modelList -and $modelList.Count -gt 0) {
+        Write-Host "  ✅ Ollama API responding at :11434" -ForegroundColor Green
+        Write-Host "     Installed models:" -ForegroundColor Cyan
+        foreach ($m in $modelList) {
+            $sizeGB = if ($m.size) { [math]::Round($m.size / 1GB, 2) } else { "N/A" }
+            Write-Host "       • $($m.name) (Size: ${sizeGB} GB, Modified: $($m.modified_at))" -ForegroundColor Cyan
+        }
+    } else {
+        Write-Host "  ✅ Ollama API responding at :11434 (No models installed currently)" -ForegroundColor Yellow
+    }
 } catch {
     Write-Host "  ⚪ Ollama API not responding at http://127.0.0.1:11434" -ForegroundColor DarkGray
 }
@@ -238,4 +250,6 @@ Write-Host "`n================================================================="
 Write-Host "                    Diagnostic Check Complete                     " -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "Tip: To run the full verification with paper trading tests:" -ForegroundColor White
-Write-Host "     .\scripts\Check-Teaka-System.ps1 -RunPaperTests`n" -ForegroundColor Yellow
+Write-Host "     .\scripts\Check-Teaka-System.ps1 -RunPaperTests" -ForegroundColor Yellow
+Write-Host "Tip: To run in check-only audit mode:" -ForegroundColor White
+Write-Host "     .\scripts\Check-Teaka-System.ps1 -CheckOnly`n" -ForegroundColor Yellow

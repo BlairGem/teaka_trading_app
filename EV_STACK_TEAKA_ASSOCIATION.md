@@ -47,6 +47,8 @@ A structured schema of all repos, endpoints, and paper parameters is tracked at:
 2. **EV Node / EV Stack Framework**:
    - Primary blockchain layer (`evstack/ev-node`).
    - Handles data availability, consensus/sequencing, and cryptographic state verification.
-3. **EV Swarm (Qwen / Ollama / GEMBot / Virtual Brain)**:
+3. **EV Swarm (Qwen / Ollama / GEMBot / Virtual Brain / Core Memory)**:
    - Provides AI-driven market analysis, sentiment evaluation, and multi-agent coordination.
+   - Core memory anchor: `C:\EV_AI\Cursor\Memory\EV_MEMORY.json`.
+   - Local LLM inference: Ollama (:11434) using lightweight, fast local models (such as `qwen2.5:3b`, `qwen3:4b`, or `phi4-mini:3.8b`) suitable for PC hardware, without requiring heavy 30B/32B models.
    - Fed into TeAka's paper broker where all trades are bounded by conservative risk parameters (50 USDT maximum order, stop loss, take profit, drawdown circuit breaker).

@@ -37,11 +37,15 @@ class EVSwarmSignalAdapter:
         node_client: Optional[EVNodeClient] = None,
         min_confidence: float = 0.65,
         default_order_cap_usdt: float = 50.0,
+        qwen_model: str = "qwen2.5:3b",
+        fallback_models: tuple[str, ...] = ("qwen2.5:3b", "qwen3:4b", "phi4-mini:3.8b"),
     ) -> None:
         self.broker = broker
         self.node_client = node_client or EVNodeClient()
         self.min_confidence = min_confidence
         self.default_order_cap_usdt = default_order_cap_usdt
+        self.qwen_model = qwen_model
+        self.fallback_models = fallback_models
         self.audit_log: List[dict] = []
 
     def parse_llm_response(self, raw_text: str, source: str = "qwen") -> SwarmDecision:
