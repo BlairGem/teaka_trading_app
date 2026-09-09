@@ -1,0 +1,66 @@
+{
+  "schema": "EV Swarm & Stack Git Integration Map v1",
+  "generated_at": "2026-09-09T14:30:00Z",
+  "primary_layers": {
+    "framework_layer": {
+      "repo": "evstack/ev-node",
+      "upstream_url": "https://github.com/evstack/ev-node.git",
+      "role": "Modular blockchain framework, EV Node, DA, P2P, sequencer, execution, CometBFT/Evolve",
+      "status": "UPSTREAM_FRAMEWORK"
+    },
+    "control_and_brain_layer": {
+      "repo": "BlairGem1234/Ev",
+      "url": "https://github.com/BlairGem1234/Ev.git",
+      "worktrees": [
+        "C:\\Users\\Blair\\EV_Git\\Ev",
+        "C:\\Users\\Blair\\EV_Git\\Ev-EVBot-Operator",
+        "C:\\Users\\Blair\\EV_Git\\Ev-fuzzy-on-main"
+      ],
+      "role": "Private EV OS, brain recovery, fuzzy brain, Qwen bundle traces, GeoNode/GeoBlockchain, EVBot operator",
+      "status": "ACTIVE_CONTROL_LAYER"
+    },
+    "ai_swarm_and_gateway_layer": {
+      "repo": "blairgem/GEMBot29",
+      "url": "https://github.com/blairgem/GEMBot29.git",
+      "role": "GEMBot gateway, Qwen Flask API (gembot_qwen_flask.py), Ollama bridge, agent interface",
+      "status": "SWARM_GATEWAY"
+    },
+    "workspace_and_sync_layer": {
+      "repo": "BlairGem1234/GPT_AI_Workspace",
+      "url": "https://github.com/BlairGem1234/GPT_AI_Workspace.git",
+      "role": "Qwen 30B via Ollama launcher, Google Drive admin wiring, mobile Scriptable deep scan sync",
+      "status": "SYNC_AND_WORKSPACE"
+    },
+    "mcp_and_persistence_layer": {
+      "repo": "BlairGem1234/Pc-5000-curser-",
+      "url": "https://github.com/BlairGem1234/Pc-5000-curser-.git",
+      "role": "Postgres GEMBot memory API, 14-tool EV<->Cursor MCP server, Ghost circle bridges",
+      "status": "MCP_MEMORY_LAYER"
+    },
+    "app_and_execution_layer": {
+      "repo": "BlairGem1234/teaka_trading_app",
+      "url": "https://github.com/BlairGem1234/teaka_trading_app.git",
+      "branch": "cursor/integrate-ev-swarm-paper-179e",
+      "role": "TeAka app/product layer, PaperBroker execution, EV Node adapter, EV Swarm paper trading",
+      "status": "APP_EXECUTION_LAYER"
+    }
+  },
+  "swarm_endpoints": {
+    "gembot_qwen_flask": "http://127.0.0.1:5056/api/qwen",
+    "ev_ollama_bridge": "http://127.0.0.1:11434/api/generate",
+    "ev_remote_server": "http://127.0.0.1:5050/ev_remote/command",
+    "ev_node_rpc": "http://127.0.0.1:26657"
+  },
+  "paper_trading_integration": {
+    "broker": "paper_trading.paper_broker.PaperBroker",
+    "swarm_adapter": "paper_trading.ev_swarm_adapter.EVSwarmSignalAdapter",
+    "node_client": "ev_node.EVNodeClient",
+    "risk_guards": {
+      "max_order_notional": 50.0,
+      "max_position_pct": 0.05,
+      "max_drawdown_pct": 0.10,
+      "stop_loss_pct": 0.02,
+      "take_profit_pct": 0.04
+    }
+  }
+}
