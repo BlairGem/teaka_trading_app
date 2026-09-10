@@ -16,7 +16,7 @@ EV Node / EV Stack (evstack/ev-node)
   │     └── Qwen Flask gateway, Ollama split mode, agent interfaces
   │
   ├── BlairGem/GPT_AI_Workspace (Sync & Workspace)
-  │     └── Qwen 30B Ollama verification, Google Drive admin wiring, phone deep scans
+  │     └── Ollama workspace sync; 30B is disabled on this PC; use qwen2.5:3b
   │
   ├── BlairGem/Pc-5000-curser- (Memory & MCP)
   │     └── Postgres GEMBot memory API, 14-tool EV<->Cursor MCP server
