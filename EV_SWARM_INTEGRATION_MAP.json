@@ -56,6 +56,30 @@
       "ev_remote_server": "http://127.0.0.1:5050/ev_remote/command",
       "ev_node_rpc": "http://127.0.0.1:26657"
     },
+    "hardware_topology": {
+      "pc5000_current": {
+        "role": "Current active Windows PC (RID 1001)",
+        "models": ["qwen3:4b", "qwen2.5:3b"],
+        "max_size": "Lightweight only (3B-4B)"
+      },
+      "computer_1": {
+        "role": "Secondary PC node / trading client",
+        "models": ["qwen2.5:3b"]
+      },
+      "computer_2": {
+        "role": "Tertiary PC node / bridge monitor",
+        "models": ["qwen2.5:3b"]
+      },
+      "laptop": {
+        "role": "Mobile / field laptop / Pythonista sync node",
+        "models": ["qwen2.5:3b"]
+      },
+      "godzone_remote": {
+        "role": "Dedicated heavy compute server (RID 1004)",
+        "intended_model": "qwen3-coder:30b",
+        "status": "OFFLINE_FROM_THIS_MACHINE"
+      }
+    },
     "ollama_models": {
       "active_default": "qwen2.5:3b",
       "fallback_candidates": ["qwen2.5:3b", "qwen3:4b", "phi4-mini:3.8b"],
