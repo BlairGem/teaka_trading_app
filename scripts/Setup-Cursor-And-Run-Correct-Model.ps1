@@ -19,14 +19,15 @@
     .\scripts\Setup-Cursor-And-Run-Correct-Model.ps1
 #>
 
-[CmdletBinding()]
-param(
-    [string]# Active PC topology:
+# Active PC topology:
 # - PC5000 (Current / RID 1001): qwen3:4b (primary) or qwen2.5:3b (lightweight)
 # - Computer 1 / Computer 2 / Laptop: Client nodes, bridge synchronizers, or Pythonista bridges
 # - GodZone (RID 1004): Dedicated heavy compute host (for 30B / 32B models when online)
 # On this PC right now, heavy 30B/32B is disabled.
-$CorrectModel = "qwen2.5:3b",
+
+[CmdletBinding()]
+param(
+    [string]$CorrectModel = "qwen2.5:3b",
     [string[]]$FallbackModels = @("qwen2.5:3b", "qwen3:4b", "phi4-mini:3.8b", "qwen2.5-coder:3b", "llama3:latest"),
     [switch]$CheckOnly = $false
 )
