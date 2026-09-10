@@ -1,76 +1,54 @@
-# EV Stack / Teaka Association
+# EV Stack / Teaka Association & Swarm Mapping
 
-This branch records the working interpretation that EV Stack / EV Node should be associated with the Teaka app layer, not treated as an unrelated side system.
+This document records the architectural and Git association between EV Stack, EV Node, the EV Swarm (Qwen, Ollama, GEMBot, EV Virtual Brain), and the TeAka trading application layer.
 
-## Branch
-
-- Repository: `BlairGem/teaka_trading_app`
-- Branch: `evstack-teaka-association`
-- Purpose: map Teaka to the EV Stack / EV Node framework layer
-
-## Association model
+## Architecture and Git Ecosystem Map
 
 ```text
-Teaka / teaka_trading_app
-  = product / app / trading interface layer
-
-EV Stack / evstack/ev-node
-  = primary node / blockchain framework layer
-
-BlairGem/Ev
-  = private EV control, bridge, config, handoff, runtime evidence, GeoNode layer
-
-BlairGem/GPT_AI_Workspace
-  = GPT-side workspace and review layer
+┌────────────────────────────────────────────────────────────────────────┐
+│                        EV Ecosystem Architecture                       │
+├────────────────────────┬───────────────────────────────────────────────┤
+│ Repository             │ Role and Tracked Assets                       │
+├────────────────────────┼───────────────────────────────────────────────┤
+│ evstack/ev-node        │ Upstream modular blockchain framework         │
+│ (upstream)             │ DA, P2P, execution, sequencer, CometBFT/Evolve│
+├────────────────────────┼───────────────────────────────────────────────┤
+│ BlairGem1234/Ev        │ Private EV OS, brain recovery, fuzzy brain,   │
+│ (worktrees: Ev,        │ Qwen bundle traces, GeoNode, EVBot operator   │
+│ Ev-EVBot-Operator,     │                                               │
+│ Ev-fuzzy-on-main)      │                                               │
+├────────────────────────┼───────────────────────────────────────────────┤
+│ blairgem/GEMBot29      │ First-party AI bridges (Qwen Flask gateway,   │
+│                        │ Ollama connectors, local agent tooling)       │
+├────────────────────────┼───────────────────────────────────────────────┤
+│ BlairGem1234/          │ Phone/Scriptable sync, Google Drive admin     │
+│ GPT_AI_Workspace       │ wiring, Qwen 30B Ollama verification          │
+├────────────────────────┼───────────────────────────────────────────────┤
+│ BlairGem1234/          │ PC5000 Cursor MCP server (Postgres brain,     │
+│ Pc-5000-curser-        │ 14 MCP tools, Ghost circles, Cloak branch)    │
+├────────────────────────┼───────────────────────────────────────────────┤
+│ BlairGem1234/          │ TeAka product/trading layer, PaperBroker,     │
+│ teaka_trading_app      │ EV Node client adapter (`ev_node.py`),        │
+│                        │ EV Swarm paper trading execution adapter      │
+└────────────────────────┴───────────────────────────────────────────────┘
 ```
 
-## External upstream
+## Machine-Readable Specification
 
-- Upstream repository: `evstack/ev-node`
-- Clone URL: `https://github.com/evstack/ev-node.git`
-- Framework: EV Node / Evolve Stack
-- Role: modular blockchain / node / DA / P2P / sequencer / execution framework
+A structured schema of all repos, endpoints, and paper parameters is tracked at:
+- `EV_SWARM_INTEGRATION_MAP.json`
 
-## Teaka role
+## Integration Boundaries
 
-Teaka should be treated as the app or product layer that may sit above, call into, or be supported by EV Stack.
-
-Do not assume Teaka already contains the EV Stack source. Prior indexed Git search did not find direct EV Node or evstack source inside `BlairGem/teaka_trading_app`.
-
-## Clean integration options
-
-1. Keep Teaka as app layer and point to a dedicated BlairGem EV Stack repo.
-2. Add EV Stack as a submodule only if deliberate.
-3. Add adapter code in Teaka that talks to an EV Stack node API.
-4. Keep node runtime, chain state, signer files, databases, and generated artifacts out of Teaka.
-
-## Do not mix
-
-Do not blindly copy the full external `evstack/ev-node` source into Teaka.
-
-Do not commit:
-
-- node databases
-- signer keys
-- passphrase files
-- generated chain state
-- runtime logs containing secrets
-- local machine auth/config files
-
-## Recommended final structure
-
-```text
-BlairGem/teaka_trading_app
-  app/product layer
-  adapters/API clients only
-
-BlairGem/EV_Stack or BlairGem/Teaka_EV_Stack
-  controlled BlairGem EV Stack integration repo
-  upstream pointer/submodule/fork strategy
-
-BlairGem/Ev
-  private control + runtime evidence + bridge layer
-
-external upstream: evstack/ev-node
-  public source framework
-```
+1. **Teaka Layer**:
+   - Resides in `BlairGem/teaka_trading_app`.
+   - Contains trading strategies, paper broker, order management, and UI.
+   - Communicates with EV Node and EV Swarm via clean adapters (`ev_node.py` and `paper_trading/ev_swarm_adapter.py`).
+2. **EV Node / EV Stack Framework**:
+   - Primary blockchain layer (`evstack/ev-node`).
+   - Handles data availability, consensus/sequencing, and cryptographic state verification.
+3. **EV Swarm (Qwen / Ollama / GEMBot / Virtual Brain / Core Memory)**:
+   - Provides AI-driven market analysis, sentiment evaluation, and multi-agent coordination.
+   - Core memory anchor: `C:\EV_AI\Cursor\Memory\EV_MEMORY.json`.
+   - Local LLM inference: Ollama (:11434) using lightweight, fast local models (such as `qwen2.5:3b`, `qwen3:4b`, or `phi4-mini:3.8b`) suitable for PC hardware, without requiring heavy 30B/32B models.
+   - Fed into TeAka's paper broker where all trades are bounded by conservative risk parameters (50 USDT maximum order, stop loss, take profit, drawdown circuit breaker).

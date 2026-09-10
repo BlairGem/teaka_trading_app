@@ -1,0 +1,10 @@
+{
+  "initial_cash": 10000.0,
+  "max_order_notional": 1000.0,
+  "max_position_pct": 0.20,
+  "max_drawdown_pct": 0.15,
+  "fee_bps": 10.0,
+  "slippage_bps": 5.0,
+  "allow_shorting": false,
+  "allowed_symbols": ["BTC-USDT", "ETH-USDT", "SOL-USDT"]
+}
