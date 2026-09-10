@@ -188,18 +188,21 @@ if ($CheckOnly) {
 # -------------------------------------------------------------
 Write-Step "6/6" "How to set Cursor itself to the correct models"
 Write-Host ""
-Write-Host "A) Cursor coding agent (this chat / Composer / Cloud Agent)" -ForegroundColor White
-Write-Host "   1. In Cursor, open the model picker at the top of Chat / Agent." -ForegroundColor Gray
-Write-Host "   2. Pick Auto, or Grok 4.6, or Claude. That is Cursor's coding model." -ForegroundColor Gray
-Write-Host "   3. File -> Open Folder -> C:\EV_AI\teaka_trading_app" -ForegroundColor Gray
+Write-Host "KEEP Override OpenAI Base URL OFF." -ForegroundColor Magenta
+Write-Host "That override is what makes GPT Sol and Claude show a warning." -ForegroundColor Magenta
+Write-Host "TeAka talks to Ollama in Python. Cursor does not need that override." -ForegroundColor Gray
 Write-Host ""
-Write-Host "B) Local TeAka / EV Swarm model (Ollama on this PC)" -ForegroundColor White
-Write-Host "   Cursor Settings (Ctrl+,) -> Models" -ForegroundColor Gray
-Write-Host "     Override OpenAI Base URL : $OllamaBase/v1" -ForegroundColor Cyan
-Write-Host "     API Key                  : ollama" -ForegroundColor Cyan
-Write-Host "     Add Model                : $chosen" -ForegroundColor Cyan
-Write-Host "   Do NOT add qwen3-coder:30b on this PC." -ForegroundColor DarkYellow
+Write-Host "A) Cursor coding agent (Chat / Agent / Cloud Agent)" -ForegroundColor White
+Write-Host "   Daily default     : Grok 4.6   (best fit for this TeAka/EV system)" -ForegroundColor Green
+Write-Host "   Hard repo debug   : GPT-5.6 Sol (one chat only, then switch back)" -ForegroundColor Cyan
+Write-Host "   Careful review    : Claude      (one chat only, then switch back)" -ForegroundColor Cyan
+Write-Host "   File -> Open Folder -> C:\EV_AI\teaka_trading_app" -ForegroundColor Gray
+Write-Host ""
+Write-Host "B) Local TeAka / EV Swarm model (Ollama on this PC, NOT the Cursor picker)" -ForegroundColor White
+Write-Host "   Correct local model : $chosen" -ForegroundColor Cyan
+Write-Host "   Ollama API          : $OllamaBase" -ForegroundColor Cyan
+Write-Host "   Do NOT run qwen3-coder:30b on this PC." -ForegroundColor DarkYellow
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "Done. Correct local model = $chosen" -ForegroundColor Cyan
+Write-Host "Done. Cursor daily = Grok 4.6. Local swarm = $chosen" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
