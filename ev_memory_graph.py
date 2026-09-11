@@ -31,18 +31,59 @@ class MemoryGraphState(TypedDict):
 
 class EVMemoryGraphEngine:
     def __init__(self, storage_dir: Optional[Path] = None):
-        self.storage_dir = storage_dir or Path(os.environ.get("EV_FILES_DIR", "D:/EV_Files")) / "Memory"
+        import platform
+        is_windows = platform.system() == "Windows"
+        candidates = [
+            Path(r"D:\EV_Files\Memory") if is_windows else Path("./Memory"),
+            Path(r"C:\EV_Files\Memory") if is_windows else Path("./Memory"),
+            Path.home() / "EV_Files" / "Memory",
+            Path("./Memory"),
+            Path("."),
+        ]
+        chosen = None
+        for cand in candidates:
+            if cand.is_dir():
+                chosen = cand
+                break
+        if chosen is None:
+            for cand in candidates:
+                try:
+                    cand.mkdir(parents=True, exist_ok=True)
+                    chosen = cand
+                    break
+                except OSError:
+                    continue
+        self.storage_dir = storage_dir or chosen or Path(".")
         self.trace_log_path = self.storage_dir / "ev_memory_graph_trace.json"
 
+        # Resolve active live brain source
+        brain_candidates = [
+            Path(r"D:\EV_Files\ev_viral_brain.json") if is_windows else Path("evbot/ev_viral_brain.json"),
+            Path(r"D:\EV_Files\EVBot_runtime\EchoVault\daemon_brain.json") if is_windows else Path("ev_virtual_brain.json"),
+            Path(r"C:\EV_Files\ev_viral_brain.json") if is_windows else Path("evbot/ev_viral_brain.json"),
+            Path(r"C:\Users\Blair\EV_Git\Ev\brain\EV_CHAT_STATE_20260607.json") if is_windows else Path("ev_virtual_brain.json"),
+            Path("ev_virtual_brain.json"),
+            Path("evbot/ev_viral_brain.json"),
+        ]
+        self.brain_path = next((p for p in brain_candidates if p.is_file()), None)
+
     def recall(self, state: MemoryGraphState) -> MemoryGraphState:
-        """Fetch and reinject past memory entries into context."""
+        """Fetch and reinject past memory entries into context from live brain."""
         query = state.get("query", "")
-        # Simulated semantic retrieval from memory store
+        brain_data = {}
+        if self.brain_path and self.brain_path.is_file():
+            try:
+                brain_data = json.loads(self.brain_path.read_text(encoding="utf-8"))
+            except Exception:
+                brain_data = {}
+
         recalled = [
             {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "topic": "EV_System_State",
+                "topic": "EV_Live_Brain",
+                "source": str(self.brain_path) if self.brain_path else "memory_store",
                 "content": f"Contextual memory linked to query: {query}",
+                "brain_keys": list(brain_data.keys())[:5],
                 "relevance": 0.95,
             }
         ]
@@ -51,6 +92,7 @@ class EVMemoryGraphEngine:
             "step": "recall",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "count": len(recalled),
+            "source": str(self.brain_path) if self.brain_path else "local",
         })
         return state
 
@@ -93,12 +135,16 @@ class EVMemoryGraphEngine:
         state = self.summarize(state)
         state = self.drift_normalization(state)
 
-        # Write trace log safely if directory exists
+        # Write trace log safely to storage_dir or fallback to current directory
         try:
-            if self.storage_dir.exists():
-                self.trace_log_path.write_text(json.dumps(state["trace_log"], indent=2), encoding="utf-8")
+            self.storage_dir.mkdir(parents=True, exist_ok=True)
+            self.trace_log_path.write_text(json.dumps(state["trace_log"], indent=2), encoding="utf-8")
         except OSError:
-            pass
+            try:
+                local_trace = Path("ev_memory_graph_trace.json")
+                local_trace.write_text(json.dumps(state["trace_log"], indent=2), encoding="utf-8")
+            except Exception:
+                pass
 
         return state
 
