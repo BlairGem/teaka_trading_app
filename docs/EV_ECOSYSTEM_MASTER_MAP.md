@@ -123,3 +123,33 @@ TeAka is now connected directly to the local EV microservice mesh via `bridge/ev
 | **EV Memory** | `http://127.0.0.1:11436` | PostgreSQL-backed persistent conversation turns & stats (`ev_memory_chat`) |
 | **Mt Greenland RoboShady** | `http://127.0.0.1:5057` | Docker specialist container for GIS/evidence and mapper status |
 
+---
+
+## 7. Diagnostic Troubleshooting & Fast-Path Operations
+
+### Why Full-Disk Root Recursion (`Get-ChildItem "C:\", "D:\"`) Halts:
+When executing:
+```powershell
+Get-ChildItem -Path "C:\", "D:\" -Filter "*brain*.json" -Recurse -ErrorAction SilentlyContinue |
+    Select-Object FullName, Length, LastWriteTime | Format-Table -AutoSize
+```
+1. **`Format-Table -AutoSize` Pipeline Buffering:** `Format-Table -AutoSize` waits to receive **every single object** across the entire pipeline before calculating column widths and writing the first row of output to the console.
+2. **Infinite Junctions & OS Protected Trees:** Traversing the root of `C:\` encounters millions of operating system files, permission boundaries (`C:\System Volume Information`, `C:\Windows\System32\config`), and recursive NTFS junction loops (`Application Data`).
+3. **The Result:** The console appears frozen or returns blank if interrupted, even though brain files are actively present in `D:\EV_Files`, `C:\EV_Core`, and `C:\Users\Blair\EV_Git\Ev\brain`.
+
+### Fast-Path Solution:
+Run `scripts/fast_ev_locate.ps1` or query known roots directly with immediate output streaming:
+```powershell
+# Targeted, non-buffered inspection:
+Get-ChildItem -Path "D:\EV_Files", "C:\EV_Core", "C:\Users\Blair\EV_Git\Ev\brain" -Filter "*brain*.json" -File |
+    ForEach-Object { "$($_.FullName) ($($_.Length) bytes)" }
+```
+
+### Immediate E:\ Drive Remap:
+If any legacy script or tool expects `E:\EV_Files\...`, run:
+```powershell
+subst E: D:\EV_Files
+```
+This mounts `D:\EV_Files` as virtual drive `E:\` instantly without rebooting or formatting.
+
+
