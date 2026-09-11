@@ -4,14 +4,26 @@ import os
 
 app = Flask(__name__)
 
-# Memory File Path
-BRAIN_FILE = "E:\\EV_Files\\ev_virtual_brain.json"
+# Memory File Paths
+BRAIN_CANDIDATES = [
+    os.path.join("D:\\", "EV_Files", "ev_viral_brain.json"),
+    os.path.join("D:\\", "EV_Files", "EVBot_runtime", "EchoVault", "daemon_brain.json"),
+    os.path.join("D:\\", "EV_Files", "ev_virtual_brain.json"),
+    os.path.join("C:\\", "EV_Files", "ev_viral_brain.json"),
+    os.path.join("C:\\", "EV_Files", "ev_virtual_brain.json"),
+    os.path.join("E:\\", "EV_Files", "ev_virtual_brain.json"),
+    "ev_virtual_brain.json",
+]
 
 # Load Brain Memory (if available)
 def load_brain():
-    if os.path.exists(BRAIN_FILE):
-        with open(BRAIN_FILE, "r") as f:
-            return json.load(f)
+    for brain_path in BRAIN_CANDIDATES:
+        if os.path.exists(brain_path):
+            try:
+                with open(brain_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                continue
     return {"error": "Brain file missing"}
 
 @app.route("/ev_remote/command", methods=["GET", "POST"])

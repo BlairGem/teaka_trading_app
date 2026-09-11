@@ -31,6 +31,19 @@ BRAIN_CANDIDATES = [
     CROSS_DEVICE_BRAIN,
     ROOT / "ev_virtual_brain.json",
     Path(os.environ.get("TEAKA_BRAIN_FILE", "")),
+    # D: Drive actual physical locations
+    Path(r"D:\EV_Files\ev_viral_brain.json"),
+    Path(r"D:\EV_Files\EVBot_runtime\EchoVault\daemon_brain.json"),
+    Path(r"D:\EV_Files\EVBot_runtime\EchoVault\echo_cava.vlt.json"),
+    Path(r"D:\EV_Files\ev_virtual_brain.json"),
+    # C: Drive junction / repo locations
+    Path(r"C:\EV_Files\ev_viral_brain.json"),
+    Path(r"C:\EV_Files\EVBot_runtime\EchoVault\daemon_brain.json"),
+    Path(r"C:\EV_Files\ev_virtual_brain.json"),
+    Path(r"C:\Users\Blair\EV_Git\Ev\brain\EV_CHAT_STATE_20260607.json"),
+    Path(r"C:\Users\Blair\EV_Git\Ev\brain\EV_FuzzyBrain_State.json"),
+    Path(r"C:\Users\Blair\EV_Git\Ev\brain\EV_PYTHONISTA_BRAIN_MAP_MASTER_2026-06-07.json"),
+    # Historical E: Drive fallback
     Path(r"E:\EV_Files\ev_virtual_brain.json"),
 ]
 
@@ -132,6 +145,7 @@ def phone_status():
             "brain": load_brain(),
             "cross_device_brain_present": CROSS_DEVICE_BRAIN.is_file(),
             "evbot_online": bool(state.get("evbot_online")),
+            "mcp_adapter_present": (ROOT / "bridge" / "ev_mcp_adapter.py").is_file(),
             "python": sys.version.split()[0],
             "sentinel_route": "ONLINE",
         }
@@ -221,6 +235,36 @@ def phone_brain_sync():
     )
 
 
+@app.get("/api/ev/mesh/status")
+def ev_mesh_status():
+    """Probe the local EV microservice mesh endpoints."""
+    endpoints = {
+        "gembot": "http://127.0.0.1:5056/status",
+        "roboshady_brain": "http://127.0.0.1:5060/status",
+        "minerals": "http://127.0.0.1:5055/status",
+        "ollama": "http://127.0.0.1:11434/api/tags",
+        "memory": "http://127.0.0.1:11436/memory/stats",
+        "mt_greenland": "http://127.0.0.1:5057/api/health",
+        "ev_commander": "http://127.0.0.1:8080/status",
+    }
+    status = {}
+    import urllib.request
+    for name, url in endpoints.items():
+        try:
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=1.5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                status[name] = {"online": True, "details": data}
+        except Exception as exc:
+            status[name] = {"online": False, "error": str(exc)}
+    return jsonify({
+        "service": "teaka-ev-mesh-probe",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "mesh": status,
+        "mcp_adapter_present": (ROOT / "bridge" / "ev_mcp_adapter.py").is_file(),
+    })
+
+
 @app.get("/api/evbot/status")
 def evbot_status():
     state = load_evbot_state()
@@ -234,6 +278,8 @@ def evbot_status():
             "mode": os.environ.get("TEAKA_MODE", "paper"),
             "live_trading_enabled": os.environ.get("LIVE_TRADING_ENABLED", "false"),
             "profile": profile,
+            "mcp_adapter": "/bridge/ev_mcp_adapter.py",
+            "mesh_probe": "/api/ev/mesh/status",
             "routes": {
                 "primary": "/ev_remote/command",
                 "start": "/api/evbot/start",
