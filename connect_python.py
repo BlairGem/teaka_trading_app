@@ -31,6 +31,19 @@ BRAIN_CANDIDATES = [
     CROSS_DEVICE_BRAIN,
     ROOT / "ev_virtual_brain.json",
     Path(os.environ.get("TEAKA_BRAIN_FILE", "")),
+    # D: Drive actual physical locations
+    Path(r"D:\EV_Files\ev_viral_brain.json"),
+    Path(r"D:\EV_Files\EVBot_runtime\EchoVault\daemon_brain.json"),
+    Path(r"D:\EV_Files\EVBot_runtime\EchoVault\echo_cava.vlt.json"),
+    Path(r"D:\EV_Files\ev_virtual_brain.json"),
+    # C: Drive junction / repo locations
+    Path(r"C:\EV_Files\ev_viral_brain.json"),
+    Path(r"C:\EV_Files\EVBot_runtime\EchoVault\daemon_brain.json"),
+    Path(r"C:\EV_Files\ev_virtual_brain.json"),
+    Path(r"C:\Users\Blair\EV_Git\Ev\brain\EV_CHAT_STATE_20260607.json"),
+    Path(r"C:\Users\Blair\EV_Git\Ev\brain\EV_FuzzyBrain_State.json"),
+    Path(r"C:\Users\Blair\EV_Git\Ev\brain\EV_PYTHONISTA_BRAIN_MAP_MASTER_2026-06-07.json"),
+    # Historical E: Drive fallback
     Path(r"E:\EV_Files\ev_virtual_brain.json"),
 ]
 
