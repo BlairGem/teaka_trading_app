@@ -88,12 +88,15 @@ The audit confirms the exact location of the **EchoVault / Vault inside the Brai
   * `commands.json` & `EchoVault_command.json`
   * `EVBot_Notepade.json`
   * `evbot_reflex_plugin.json`
-* **Root Brain State:**
-  * `D:\EV_Files\ev_viral_brain.json`
-  * `D:\EV_Files\EV_Sensory_Feed.json`
-  * `D:\EV_Files\ev_runtime_status.json`
-  * `D:\EV_Files\Brain\Inbound\external_inference.json`
-  * `D:\EV_Files\Config\brain_authority.json`
+* **Root Files in `D:\EV_Files\` (Audit Verified):**
+  * `ev_viral_brain.json` (525 bytes, active reflex brain)
+  * `EV_Sensory_Feed.json` (5,586 bytes, telemetry stream)
+  * `ev_runtime_status.json` (38 bytes, online status flag)
+  * `EVBridge_Update_Service.ps1`, `EV_CERT_ALL.ps1`, `Move_EV_Logs_To_D.ps1`, `Check_Notepad_Runtime.ps1`
+  * `Brain\`, `Brain_split_backup_20260804_111803\`, `Recovered_Brain\`
+  * `RoboShady\`, `Mt_Greenland\`, `Voice\`, `VoiceJournal\`, `VoiceMemory\`, `VoiceRuntime\`
+  * `Spells\`, `Reflex\`, `Hooks\`, `Launchers\`, `Paper_Practice\`
+  * `Bridge\` (`bridge_config.json` [45 B, Archive], `ev_microserver.py` [45 B, Archive] - fully hydrated, not 0 KB)
 
 ---
 
