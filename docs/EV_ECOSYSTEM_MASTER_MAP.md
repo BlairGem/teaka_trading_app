@@ -104,3 +104,19 @@ The audit confirms the exact location of the **EchoVault / Vault inside the Brai
   * Scriptable: `phone/Scriptable_EVBot_Lore.js`, mapped to `ev_scriptable_runtime_chat_checkpoint_2026-06-16.json`.
   * State files: `therruedevil7.json`, `Cross_device_brain.json`, `evbot_lore_state.json`.
 * **Safe Fallback:** Operates OFFLINE on device; promotes to ONLINE when `http://<lan-ip>:5050` or `127.0.0.1:5050` is reachable.
+
+---
+
+## 6. Local EV Microservice Mesh & Codex FastMCP Adapter
+
+TeAka is now connected directly to the local EV microservice mesh via `bridge/ev_mcp_adapter.py` and probed via `/api/ev/mesh/status`:
+
+| Service | Port | Endpoint Role |
+| :--- | :--- | :--- |
+| **GEMBot** | `http://127.0.0.1:5056` | Local Qwen `qwen3:4b` bounded second-opinion agent (`gembot_ask`) |
+| **RoboShady Brain** | `http://127.0.0.1:5060` | Bounded file diagnostics, cataloging, SQLite inventory, and builds (`roboshady_*`) |
+| **Minerals AI** | `http://127.0.0.1:5055` | Geology & GIS specialist agent (`minerals_geology_ask`) |
+| **Windows Ollama** | `http://127.0.0.1:11434` | Local model server & tags query (`/api/tags`) |
+| **EV Memory** | `http://127.0.0.1:11436` | PostgreSQL-backed persistent conversation turns & stats (`ev_memory_chat`) |
+| **Mt Greenland RoboShady** | `http://127.0.0.1:5057` | Docker specialist container for GIS/evidence and mapper status |
+
