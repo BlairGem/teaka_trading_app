@@ -245,6 +245,7 @@ def ev_mesh_status():
         "ollama": "http://127.0.0.1:11434/api/tags",
         "memory": "http://127.0.0.1:11436/memory/stats",
         "mt_greenland": "http://127.0.0.1:5057/api/health",
+        "ev_commander": "http://127.0.0.1:8080/status",
     }
     status = {}
     import urllib.request

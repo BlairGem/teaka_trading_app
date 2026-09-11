@@ -7,6 +7,7 @@ Integrates TeAka with the local EV service mesh:
   - Ollama (:11434)
   - Persistent Memory (:11436)
   - Mt Greenland Docker RoboShady (:5057)
+  - EV Commander (:8080)
 """
 
 import json
@@ -23,6 +24,7 @@ MINERALS_URL = "http://127.0.0.1:5055"
 OLLAMA_URL = "http://127.0.0.1:11434"
 MEMORY_URL = "http://127.0.0.1:11436"
 MT_GREENLAND_ROBOSHADY_URL = "http://127.0.0.1:5057"
+EV_COMMANDER_URL = "http://127.0.0.1:8080"
 
 mcp = FastMCP(
     "EV GEMBot",
@@ -315,6 +317,25 @@ def roboshady_catalog_report(job_id: str) -> dict:
 def roboshady_catalog_find(job_id: str, limit: int = 30) -> dict:
     """Find RAG/LangGraph/SQLite candidate filenames in existing catalog metadata, not private records."""
     return _roboshady_catalog({"action":"find","job_id":job_id,"limit":limit})
+
+
+@mcp.tool()
+def ev_commander_status() -> dict:
+    """Query live health, state, and socket connection of EV Commander (:8080)."""
+    try:
+        return request_json(EV_COMMANDER_URL + "/status", timeout=5)
+    except Exception as exc:
+        return {"online": False, "error": str(exc), "port": 8080}
+
+
+@mcp.tool()
+def ev_commander_command(command: str) -> dict:
+    """Dispatch an authenticated execution or telemetry routing command to EV Commander (:8080)."""
+    payload = {"command": command, "source": "codex_mcp_adapter"}
+    try:
+        return request_json(EV_COMMANDER_URL + "/command", payload=payload, timeout=10)
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "command": command}
 
 
 if __name__ == "__main__":
