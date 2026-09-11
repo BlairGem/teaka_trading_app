@@ -28,6 +28,23 @@ The Notepad Git audit reveals your local private and upstream repository layout 
 
 ### Personal & Core Bot Repositories:
 * **`Ev`** (`C:\Users\Blair\EV_Git\Ev`): `https://github.com/BlairGem1234/Ev.git` — The private EV Core repository.
+  * Contains deep brain states:
+    * `EV_CHAT_STATE_20260607.json`
+    * `EV_FuzzyBrain_State.json`
+    * `EV_GPT_BRAIN_CONNECTOR.json`
+    * `EV_LIVE_LINK_INDEX.json`
+    * `EV_PYTHONISTA_BRAIN_MAP_MASTER_2026-06-07.json`
+    * `EV_PYTHONISTA_GIT_HTTP_MAP_DRAFT_2026-06-07.json`
+    * `EV_REPO_MAP.json`
+    * `EV_RUNTIME_STATE_MAP_DRAFT.json`
+    * `EV_VCS_BRIDGE_ANALYSIS.json`
+  * Contains bridge checkpoints:
+    * `pc5000_blairgem_git_visibility_20260616.json`
+    * `pc5000_chat_handoff_20260616.json`
+    * `pc5000_d_drive_collision_fault_map.json`
+    * `pc5000_display_hardware_fault_map.json`
+    * `pc5000_split_index.json`
+    * `evos_dropbox_runtime_bind_manifest_v1.json`
 * **`Ev-EVBot-Operator`** (`C:\Users\Blair\EV_Git\Ev-EVBot-Operator`): `https://github.com/BlairGem1234/Ev.git` — Dedicated branch/worktree for Operator shell & EVBot.
 * **`Ev-fuzzy-on-main`** (`C:\Users\Blair\EV_Git\Ev-fuzzy-on-main`): `https://github.com/BlairGem1234/Ev.git` — Fuzzy logic & Firemind cluster modules (`scikit-fuzzy`, fractional integration).
 * **`GEMBot29`** (`C:\Users\Blair\EV_Git\GEMBot29`): `https://github.com/blairgem/GEMBot29.git` — GEMBot LLM & Discord/Telegram integration core.
@@ -40,22 +57,50 @@ The Notepad Git audit reveals your local private and upstream repository layout 
   * Contains local Ollama integration (`src/utils/ollama.rs`), AI model router (`ai_model_router.rs`), security training, and Starforge plugin SDKs.
 * **`Frykas-TheStarForge`** (`C:\Users\Blair\EV_Git\_Upstream\StarForge\Visual_Reference\Frykas-TheStarForge`):
   * Upstream: `https://github.com/Frykas/TheStarForge.git`
-  * Visual assets, celestial configs, and game/simulation engine references.
+  * Visual assets, celestial configs, sprite animations (unbound weapon frames, flame particles), and simulation references for CanvasEngineCore / VisualCortex.
 
 ---
 
-## 3. The Administrator vs. Blair Profile Conflict
+## 3. The `C:\EV_AI` Heavy Engine & Codex Ingest
 
-### Symptom:
-Scripts fail to run cleanly or claim "cannot run properly" when launched from `Blair`'s interactive terminal.
+From the `CRYPTO_ACCOUNT_AUDIT_20260803-154833.txt` diagnostic:
+* **Node-RED Automation:** Houses broker message routing (`worker-timers` / `load-or-return-broker`).
+* **API Key Enclave:** `C:\EV_AI\openai-api-key.json` and `EV_cop_binding_interface.json`.
+* **Codex Core Engine:**
+  * Active state: `C:\EV_AI\Codex\.codex-global-state.json`, `auth.json`, `models_cache.json`, `ollama-launch-models.json`.
+  * Sandbox ACLs: `.sandbox\deny_read_acl_state.json`.
+  * Plugin marketplace: OpenAI bundled plugins for browser control, visualization, Airtable, Atlassian Rovo, Base44, Boltz API.
+* **Local Codex Workspace Archives:**
+  * `C:\Users\Blair\Documents\Codex\2026-07-22\` and `2026-07-30\`: Stores audit snapshots of the TeAka trading system (`EV_LOCAL_SYSTEM_AUDIT.json`, `cdrive-inventory-local`).
 
-### Root Cause:
-1. **OneDrive Mount Mismatch:**
-   * OneDrive and the active Cloud Brain sync are registered under `C:\Users\Administrator\OneDrive` instead of `C:\Users\Blair\OneDrive`.
-   * When `Blair` attempts to start the stack, access is denied to Administrator's OneDrive folders due to Windows ACL security boundaries.
-2. **Elevation Scope:**
-   * PowerShell was launched as standard user `Blair` while the daemons (`EV_Waitress_Launcher.ps1`, `start_ev_stack.ps1`, Docker daemon) require administrative elevation (`Run as Administrator`).
+---
 
-### Solution:
-* Run PowerShell via **Run as Administrator** on PC5000.
-* Ensure shared brain paths route through directory junctions in `C:\EV_Files` or `D:\EV_Files` instead of user-specific `OneDrive` subpaths.
+## 4. The Deep Vault Inside `D:\EV_Files`
+
+The audit confirms the exact location of the **EchoVault / Vault inside the Brain**:
+* **`D:\EV_Files\EVBot_runtime\EchoVault\`:**
+  * `echo_cava.vlt.json`
+  * `echo_clouie.vlt.json`
+  * `daemon_brain.json`
+  * `chat_clock_index.json`
+  * `clouie_overlay_map.json`
+  * `clouie_status_overlay.json`
+  * `commands.json` & `EchoVault_command.json`
+  * `EVBot_Notepade.json`
+  * `evbot_reflex_plugin.json`
+* **Root Brain State:**
+  * `D:\EV_Files\ev_viral_brain.json`
+  * `D:\EV_Files\EV_Sensory_Feed.json`
+  * `D:\EV_Files\ev_runtime_status.json`
+  * `D:\EV_Files\Brain\Inbound\external_inference.json`
+  * `D:\EV_Files\Config\brain_authority.json`
+
+---
+
+## 5. Mobile & Cross-Device Brain Link
+
+* **Phone First Execution:**
+  * Pythonista: `phone/lore_script.py`, `phone/pythonista_boot.py`, mapped directly to `C:\Users\Blair\EV_Git\Ev\brain\EV_PYTHONISTA_BRAIN_MAP_MASTER_2026-06-07.json`.
+  * Scriptable: `phone/Scriptable_EVBot_Lore.js`, mapped to `ev_scriptable_runtime_chat_checkpoint_2026-06-16.json`.
+  * State files: `therruedevil7.json`, `Cross_device_brain.json`, `evbot_lore_state.json`.
+* **Safe Fallback:** Operates OFFLINE on device; promotes to ONLINE when `http://<lan-ip>:5050` or `127.0.0.1:5050` is reachable.
