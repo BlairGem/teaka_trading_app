@@ -4,8 +4,10 @@ import os
 
 app = Flask(__name__)
 
-# Memory File Path
-BRAIN_FILE = "E:\\EV_Files\\ev_virtual_brain.json"
+# Memory File Path (supports EV_Files or EV_AI env vars, defaulting to C:\EV_Files)
+ev_files_dir = os.environ.get("EV_Files", r"C:\EV_Files")
+default_brain = os.path.join(ev_files_dir, "ev_virtual_brain.json") if os.path.exists(ev_files_dir) else os.path.join(os.path.dirname(__file__), "ev_virtual_brain.json")
+BRAIN_FILE = os.environ.get("TEAKA_BRAIN_FILE", default_brain)
 
 # Load Brain Memory (if available)
 def load_brain():

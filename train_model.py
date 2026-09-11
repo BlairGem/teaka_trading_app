@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -27,5 +28,8 @@ model = Sequential([
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 model.fit(X_train, y_train, epochs=50, batch_size=2, verbose=1)
-model.save("E:/EV_Files/teaka_trading_app/qtrader_model.h5")
+default_model_dir = "C:/EV_Files/teaka_trading_app" if os.path.exists("C:/EV_Files") else os.path.join(os.path.dirname(__file__), "model_output")
+output_dir = os.environ.get("TEAKA_MODEL_DIR", default_model_dir)
+os.makedirs(output_dir, exist_ok=True)
+model.save(os.path.join(output_dir, "qtrader_model.h5"))
 print("? Model training complete and saved.")

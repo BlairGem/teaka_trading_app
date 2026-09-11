@@ -1,0 +1,25 @@
+{
+  "system": "EV Terminal Runtime Environment",
+  "paths": {
+    "EV_AI": "C:\\EV_AI",
+    "EV_Files": "C:\\EV_Files",
+    "EV_Files_junction": "D:\\EV_Files",
+    "Logs": "D:\\EV_AI\\logs",
+    "Cursor": "C:\\EV_AI\\Cursor",
+    "Codex": "C:\\EV_AI\\Codex",
+    "Minerals": "C:\\EV_AI\\Minerals",
+    "Memory": "C:\\EV_AI\\Cursor\\Memory\\EV_MEMORY.json",
+    "Operator": "C:\\EV_Operator",
+    "Node_runtime": "C:\\EV_Node",
+    "Node_data": "D:\\EV_Node",
+    "Ollama_endpoint": "http://127.0.0.1:11434",
+    "Ollama_models": "D:\\OllamaModels"
+  },
+  "bindings": {
+    "cursor": true,
+    "bridge": true,
+    "ollama": true,
+    "minerals": true,
+    "bridge_secured": true
+  }
+}

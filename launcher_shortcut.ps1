@@ -1,1 +1,1 @@
-notepad.exe "E:\EV_Files\teaka_trading_app\import_sql.ps1"
+notepad.exe "C:\EV_Files\teaka_trading_app\sql_teaka_dashboard\import_teaka_sql.ps1"

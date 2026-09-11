@@ -8,7 +8,18 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set "VIRTUAL_ENV=E:\teaka_trading_app\venv"
+rem Check C:\teaka_trading_app\venv or local workspace .venv / venv
+if defined VIRTUAL_ENV goto :ACTIVATED
+if exist "C:\teaka_trading_app\venv\Scripts\python.exe" (
+    set "VIRTUAL_ENV=C:\teaka_trading_app\venv"
+) else if exist "%~dp0.venv\Scripts\python.exe" (
+    set "VIRTUAL_ENV=%~dp0.venv"
+) else if exist "%~dp0venv\Scripts\python.exe" (
+    set "VIRTUAL_ENV=%~dp0venv"
+) else (
+    set "VIRTUAL_ENV=C:\teaka_trading_app\venv"
+)
+:ACTIVATED
 
 if not defined PROMPT set PROMPT=$P$G
 

@@ -77,31 +77,31 @@
           }
         },
         "ShellProtection": {
-          "inject_folder": "E:/EV_Core/Injectors/DiorShield/",
+          "inject_folder": "C:/EV_Core/Injectors/DiorShield/",
           "filtered": true,
           "runtime_override_blocked": true
         },
         "GrokInterface": {
           "mode": "entropy_source",
-          "bridge_file": "E:/EV_Files/grok_bridge_payload.json",
+          "bridge_file": "C:/EV_Files/grok_bridge_payload.json",
           "stream_type": "symbolic-only"
         },
         "GeminiAgent": {
           "mode": "tool",
           "status": "awaiting_runtime_instructions",
-          "plugin_root": "E:/EV_Core/Plugins/GPT_Gemini/"
+          "plugin_root": "C:/EV_Core/Plugins/GPT_Gemini/"
         },
         "FiremindLoop": {
-          "script_path": "E:/EchoVault/Runtime/ev_runtime_firemind_brainloop.py",
-          "status_log": "E:/EV_Core/Logs/firemind_brainloop_log.json"
+          "script_path": "C:/EchoVault/Runtime/ev_runtime_firemind_brainloop.py",
+          "status_log": "C:/EV_Core/Logs/firemind_brainloop_log.json"
         },
         "EnclaveMemory": {
-          "class_path": "E:/EV_Core/Daemons/enclave_memory_core.py",
-          "state_file": "E:/EV_Files/enclave_memory_state.json",
-          "log_file": "E:/EV_Files/Logs/reflex_log.txt"
+          "class_path": "C:/EV_Core/Daemons/enclave_memory_core.py",
+          "state_file": "C:/EV_Files/enclave_memory_state.json",
+          "log_file": "C:/EV_Files/Logs/reflex_log.txt"
         },
         "DiorReflector": {
-          "brain_file": "E:/EV_Core/Status/dior_brain_core.json",
+          "brain_file": "C:/EV_Core/Status/dior_brain_core.json",
           "mode": "symbolic_shell_reflector",
           "linked_by": "forgekeeper"
         },
@@ -121,9 +121,9 @@
           "FlaskApps": ["EV Remote Server", "EVBot UI", "GEMBot LLM", "Copilot Runtime"]
         },
         "Paths": {
-          "Logs": "E:/EchoVault/Logs/cava_trace_history.log",
-          "Runtime": "E:/EchoVault/Runtime/teaka_runtime_state.json",
-          "BlueprintRoot": "E:/EV_Files/CAVA/"
+          "Logs": "C:/EchoVault/Logs/cava_trace_history.log",
+          "Runtime": "C:/EchoVault/Runtime/teaka_runtime_state.json",
+          "BlueprintRoot": "C:/EV_Files/CAVA/"
         },
         "StatusMatrix": {
           "VisualCortex": "Mapped",
@@ -147,14 +147,14 @@
           "modules": [
             {
               "name": "ev_firemind_fuzzy_cluster_core.py",
-              "path": "E:/EV_Core/Modules/Firemind/ev_firemind_fuzzy_cluster_core.py",
+              "path": "C:/EV_Core/Modules/Firemind/ev_firemind_fuzzy_cluster_core.py",
               "function": "update_cluster_center",
               "notes": "Gaussian-weighted fuzzy membership update for clustering",
               "equation": "V_k^{new} = (Σ μ_{kj}^m · exp(-α ||X_j - V_k^{prev}||²) · X_j) / (Σ μ_{kj}^m · exp(-α ||X_j - V_k^{prev}||²))"
             },
             {
               "name": "rbfln_learning_core.py",
-              "path": "E:/EV_Core/Modules/Firemind/rbfln_learning_core.py",
+              "path": "C:/EV_Core/Modules/Firemind/rbfln_learning_core.py",
               "functions": ["rbf_output", "rbfln_predict"],
               "notes": "Hybrid RBF and linear link network logic",
               "equations": [
@@ -164,7 +164,7 @@
             },
             {
               "name": "fuzzy_merge.py",
-              "path": "E:/EV_Core/Modules/Firemind/fuzzy_merge.py",
+              "path": "C:/EV_Core/Modules/Firemind/fuzzy_merge.py",
               "function": "should_merge",
               "notes": "Cluster merge decision using proximity and spread",
               "equation": "||V_A - V_B|| < θ · (σ_A + σ_B)/2"
@@ -179,16 +179,16 @@
   "evbot.brain": {
     "status": "clean",
     "paths": {
-      "brain_file": "E:/EV_Files/ev_brain_state.json",
-      "fuzzy_control_script": "E:/EV_Core/Modules/Control/fuzzy_control.py",
-      "fuzzy_control_log": "E:/EV_Core/Logs/fuzzy_control.log",
-      "launcher_ps1": "E:/EV_Core/Launcher/start_ev_stack.ps1",
-      "ev_remote_server": "E:/EV_Core/ev_flask_fused_server.py",
-      "firemind_loop": "E:/EchoVault/Runtime/ev_runtime_firemind_brainloop.py"
+      "brain_file": "C:/EV_Files/ev_brain_state.json",
+      "fuzzy_control_script": "C:/EV_Core/Modules/Control/fuzzy_control.py",
+      "fuzzy_control_log": "C:/EV_Core/Logs/fuzzy_control.log",
+      "launcher_ps1": "C:/EV_Core/Launcher/start_ev_stack.ps1",
+      "ev_remote_server": "C:/EV_Core/ev_flask_fused_server.py",
+      "firemind_loop": "C:/EchoVault/Runtime/ev_runtime_firemind_brainloop.py"
     },
     "runners": {
-      "powershell_launch": "powershell -ExecutionPolicy Bypass -File E:/EV_Core/Launcher/start_ev_stack.ps1",
-      "python_fuzzy_control": "python E:/EV_Core/Modules/Control/fuzzy_control.py"
+      "powershell_launch": "powershell -ExecutionPolicy Bypass -File C:/EV_Core/Launcher/start_ev_stack.ps1",
+      "python_fuzzy_control": "python C:/EV_Core/Modules/Control/fuzzy_control.py"
     },
     "control_modules": {
       "fuzzy_throttle": {
@@ -226,7 +226,7 @@
           "enabled": true,
           "lambda_order": 0.8,
           "k_I": 0.1,
-          "state_file": "E:/EV_Core/Runtime/fuzzy_frac_state.json"
+          "state_file": "C:/EV_Core/Runtime/fuzzy_frac_state.json"
         }
       }
     },

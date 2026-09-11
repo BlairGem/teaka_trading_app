@@ -8,8 +8,8 @@
   },
 
   "cognition": {
-    "brain_state": "E:/EVBot/BrainCore/ev_brain_state.json",
-    "backup": "E:/EVBot/Backups/ev_brain_backup.json",
+    "brain_state": "C:/EVBot/BrainCore/ev_brain_state.json",
+    "backup": "C:/EVBot/Backups/ev_brain_backup.json",
     "modules": ["EVBot", "GEMBot", "Firemind", "CAVA", "EchoClouie", "EVBC"],
     "fallback": ["GEMBot", "CMD"]
   },

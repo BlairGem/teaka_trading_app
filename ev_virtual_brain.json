@@ -10,9 +10,9 @@
     "gem_link": true
   },
   "paths": {
-    "self": "E:/EV_Files/ev_virtual_brain.json",
-    "bridge": "E:/EV_Files/Bridge/",
-    "logs": "E:/EV_Files/Logs/ev_runtime.log"
+    "self": "C:/EV_Files/ev_virtual_brain.json",
+    "bridge": "C:/EV_Files/Bridge/",
+    "logs": "C:/EV_Files/Logs/ev_runtime.log"
   },
   "memory": {
     "last_confirmed": "2025-05-31T19:39:08.623617",
