@@ -263,3 +263,37 @@ This document formalizes the runtime mapping, process hierarchy, user context bo
    - *Fix:* Created directory junction `mklink /J "C:\Users\Blair\OneDrive\EV_Core" "C:\Users\Administrator\OneDrive\EV_Core"`.
 4. **Duplicate Brain State Sources:**
    - *Resolution:* Authoritative live state is pinned to `D:\EV_Files\ev_viral_brain.json` and `D:\EV_Files\EVBot_runtime\EchoVault\daemon_brain.json`. `connect_python.py` and `teaka_trading_app_validate_brain.py` dynamically resolve across these paths with zero code modifications needed when switching workstations.
+
+---
+
+## 4. LangGraph, RAG & Vector Engine Integration
+
+The viral brain (`evbot/ev_viral_brain.json`) defines the `LangGraphEngine` specification:
+- **Graph Nodes:** `Recall` -> `Summarize` -> `DriftNormalization` -> `END`
+- **Graph Code:** `ev_memory_graph.py`
+- **Update Cycle:** Ingest new inputs, execute recall, drift normalization, summarize, and write trace log to `D:\EV_Files\Memory\ev_memory_graph_trace.json`.
+
+### Required NPM Packages (Node-RED & JS Engine):
+- `@langchain/langgraph`
+- `@langchain/core`
+- `@langchain/community`
+- `@langchain/ollama`
+- `@langchain/openai`
+- `chromadb`
+- `vectordb`
+
+### Required Python Packages (Core LangGraph & Vector Stores):
+- `langgraph`
+- `langchain`
+- `langchain-core`
+- `langchain-community`
+- `langchain-ollama`
+- `chromadb`
+- `sentence-transformers`
+- `faiss-cpu`
+
+### Automation Scripts Added:
+1. `scripts/install_rag_langgraph.ps1`: Automated installer for Windows & EV_Node (`C:\EV_Node`) + Node-RED user directory (`C:\EV_AI\node-red`).
+2. `scripts/install_rag_langgraph_wsl.sh`: Automated installer for WSL2 native Ubuntu environment.
+3. `ev_memory_graph.py`: Runnable implementation of the LangGraph memory cycle with graceful fallback.
+
