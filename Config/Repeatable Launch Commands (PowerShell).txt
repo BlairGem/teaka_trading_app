@@ -1,9 +1,9 @@
 # 🧠 Model Training
-python E:\EV_Files\teaka_trading_app\train_model.py
+python C:\EV_Files\teaka_trading_app\train_model.py
 
 # 🛠️ Flask Backend
-python E:\EV_Files\teaka_trading_app\app.py
+python C:\EV_Files\teaka_trading_app\app.py
 
 # 🌐 Serve Frontend (local test)
-cd E:\EV_Files\teaka_trading_app\client
+cd C:\EV_Files\teaka_trading_app\client
 npm run dev

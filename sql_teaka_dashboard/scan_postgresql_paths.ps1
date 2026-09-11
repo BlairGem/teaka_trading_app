@@ -1,5 +1,5 @@
 # 🔧 Create PostgreSQL Scanner Script and Open in Notepad
-$scriptPath = "E:\EV_Files\Tools\scan_postgresql_paths.ps1"
+$scriptPath = "C:\EV_Files\Tools\scan_postgresql_paths.ps1"
 
 $scriptContent = @'
 Write-Host "`n🔍 Scanning for PostgreSQL folders and executables..." -ForegroundColor Cyan

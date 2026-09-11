@@ -12,7 +12,7 @@ export async function trainModel(data) {
   const ys = tf.tensor2d(data.outputs);
 
   await model.fit(xs, ys, { epochs: 200 });
-  await model.save('file://E:/EV_Files/teaka_trading_app/integration/ml/model_output');
+  await model.save('file://C:/EV_Files/teaka_trading_app/integration/ml/model_output');
 
   console.log('✅ Model training complete');
 }

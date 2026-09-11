@@ -3,7 +3,7 @@ $env:PGPASSWORD = "EVBot-80"
 $psqlPath = "C:\Program Files\PostgreSQL\15\bin\psql.exe"  # Adjust if different
 $dbName = "teaka_trading"
 $dbUser = "postgres"
-$sqlFolder = "E:\EV_Files\teaka.trading app\sql_teaka_dashboard"
+$sqlFolder = if (Test-Path "$PSScriptRoot\create_trades.sql") { $PSScriptRoot } else { "C:\EV_Files\teaka_trading_app\sql_teaka_dashboard" }
 
 # Import all SQL files
 Get-ChildItem -Path $sqlFolder -Filter *.sql | ForEach-Object {

@@ -31,7 +31,7 @@ BRAIN_CANDIDATES = [
     CROSS_DEVICE_BRAIN,
     ROOT / "ev_virtual_brain.json",
     Path(os.environ.get("TEAKA_BRAIN_FILE", "")),
-    Path(r"E:\EV_Files\ev_virtual_brain.json"),
+    Path(r"C:\EV_Files\ev_virtual_brain.json"),
 ]
 
 

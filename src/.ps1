@@ -1,6 +1,6 @@
 # Teaka Swarm – Daily Summary Task Scheduler
 $taskName = "TeakaDailySummary"
-$scriptPath = "E:\EV_Files\teaka_trading_app\email_report.py"
+$scriptPath = "C:\EV_Files\teaka_trading_app\email_report.py"
 
 $trigger = New-ScheduledTaskTrigger -Daily -At 00:01AM
 $action = New-ScheduledTaskAction -Execute "python.exe" -Argument "`"$scriptPath`""

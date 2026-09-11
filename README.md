@@ -11,7 +11,7 @@ This tree is the **TeAka app / recovery surface**:
 - dashboard, risk, ML/backtest, SQL, EV bridge **fragments**
 - pointers to the **full live trading engine** and local EV/GEMBot/Swarm layout
 
-It is **not** a complete copy of every local Windows / Starforge / GEMBotSys artifact. Those stay on the local machine (`E:\EV_Files`, `D:\Starforge`, user `GEMBotSys`) and in sibling / private repos.
+It is **not** a complete copy of every local Windows / Starforge / GEMBotSys artifact. Those stay on the local machine (`C:\EV_Files`, `D:\Starforge`, user `GEMBotSys`) and in sibling / private repos.
 
 Live exchange order submission in this fork remains **disabled**.
 
@@ -153,16 +153,16 @@ PRIVATE_EXCHANGE_API_ENABLED=true
 | **Strategy bots** | BoltBuddy `TradingStrategy` + strategy editor + auto-trading flag |
 | **Alert bots** | BoltBuddy `messaging.py`; this repo has Telegram alert stubs (`public/ev_alert_api.py`, `alert_routes.py.py`, `@teaka_trader_bot` notes) |
 | **TeAka Swarm** | Branding / daily summary path in this repo (`email_report.py`, `schedule_teaka_summary.ps1`, sign-off “Teaka Swarm Core”). Not a multi-agent source tree in Git. |
-| **GEMBot / EVBot** | Local EV control layer. Referenced here via `status_report.yaml`, `ev_ollama_*.py`, `ev_remote_server.py`, `Config/# Define the EV Shell Runtime Envir.txt`. Windows provenance: user `GEMBotSys`, vault `D:\Starforge\Vault`, bridge `E:\EV_Files\Bridge` / `D:\EV_Files\Bridge`. Private EV control repo is expected outside this fork (e.g. `BlairGem/Ev` when available). |
+| **GEMBot / EVBot** | Local EV control layer. Referenced here via `status_report.yaml`, `ev_ollama_*.py`, `ev_remote_server.py`, `Config/# Define the EV Shell Runtime Envir.txt`. Windows provenance: user `GEMBotSys`, vault `D:\Starforge\Vault`, bridge `C:\EV_Files\Bridge` / `D:\EV_Files\Bridge`. Private EV control repo is expected outside this fork (e.g. `BlairGem/Ev` when available). |
 | **QTrader / RL bots** | Sketches in `model_output/` + planned tree in `integration_pipeline/QTrader.txt` — not wired to BoltBuddy or paper broker |
 | **Dashboard bot panel** | `templates/dashboard.html` still has a bot placeholder block |
 
 Local CS layout (from tracked paths / config — on your machine):
 
 ```text
-E:\EV_Files\teaka_trading_app\     ← this app tree / reports / models
-E:\EV_Files\Bridge\                ← EV inbox / bridge drops
-E:\EV_Files\ev_virtual_brain.json  ← EV brain state
+C:\EV_Files\teaka_trading_app\     ← this app tree / reports / models
+C:\EV_Files\Bridge\                ← EV inbox / bridge drops
+C:\EV_Files\ev_virtual_brain.json  ← EV brain state
 D:\Starforge\Vault\                ← GEM Bot vault + spells
 D:\EV_Files\Tools\                 ← EV runtime environment JSON writers
 C:\Users\GEMBotSys\...             ← GEMBotSys Python / venv provenance
